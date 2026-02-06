@@ -17,33 +17,46 @@ jobs:
   sync:
     runs-on: ubuntu-latest
     env:
-      RELEASE_TAG: ${{ github.event.release.tag_name || inputs.tag }}
+      RELEASE_TAG_RAW: ${{ github.event.release.tag_name || inputs.tag }}
     steps:
-      - name: Checkout release ref
+      - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          ref: ${{ env.RELEASE_TAG }}
+
+      - name: Normalize release tag
+        shell: bash
+        run: |
+          set -euo pipefail
+          TAG="${RELEASE_TAG_RAW}"
+          if [[ -z "$TAG" ]]; then
+            echo "Release tag is empty" >&2
+            exit 1
+          fi
+          if [[ "$TAG" != v* ]]; then
+            TAG="v$TAG"
+          fi
+          echo "RELEASE_TAG=$TAG" >> "$GITHUB_ENV"
+          echo "Using release tag: $TAG"
 
       - name: Download release binaries
-        uses: robinraju/release-downloader@v1.11
-        with:
-          repository: ${{ github.repository }}
-          tag: ${{ env.RELEASE_TAG }}
-          fileName: |
-            bootloader.bin
-            partitions.bin
-            firmware.bin
-            littlefs.bin
-            version.json
-          out-file-path: deploy
-          token: ${{ secrets.GITHUB_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p deploy
+          BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
+          for f in bootloader.bin partitions.bin firmware.bin littlefs.bin version.json; do
+            echo "Downloading $f"
+            curl -fL --retry 5 --retry-delay 2 --retry-all-errors \
+              "$BASE_URL/$f" -o "deploy/$f"
+          done
 
       - name: Copy manifest file
+        shell: bash
         run: |
           set -euo pipefail
           cp manifest.json deploy/manifest.json
 
       - name: Verify deploy files
+        shell: bash
         run: |
           set -euo pipefail
           for f in bootloader.bin partitions.bin firmware.bin littlefs.bin version.json manifest.json; do
