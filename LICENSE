@@ -1,16 +1,16 @@
 MIT License
 
-Copyright (c) 2026 Chris M.
+Copyright (c) 2026 SpringfieldVW.com
 
-This project, OpenHaldex-S3, is a derivative work of the following
-MIT-licensed projects:
+This project, OpenHaldex-S3, includes and adapts code and concepts from:
 
-- OpenHaldex by BangingDonk
-- OpenHaldex-C6 by Forbes Automotive
+- OpenHaldex by BangingDonk (MIT License)
+- OpenHaldex-C6 by Forbes Automotive (attributed source)
 
-Original code and concepts from the above projects are used and modified
-under the terms of the MIT License. All original copyright notices are
-retained where applicable.
+Portions originating from MIT-licensed upstream code remain under MIT terms.
+Attribution to OpenHaldex-C6 is provided for provenance; this notice does not
+state or imply a separate license grant for third-party code beyond applicable
+upstream permissions.
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal
