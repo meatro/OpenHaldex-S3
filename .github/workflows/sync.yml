@@ -74,3 +74,4 @@ jobs:
           port: 21
           local-dir: deploy/
           server-dir: ${{ secrets.WEB_FTP_TARGET_DIR }}
+          dangerous-clean-slate: true
