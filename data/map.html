@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenHaldex Map Editor</title>
+    <link rel="stylesheet" href="/styles.css?v=7" />
+  </head>
+  <body data-page="map">
+    <header class="appHeader">
+      <div class="titleWrap">
+        <div class="brandMark">OH</div>
+        <div>
+          <h1>Map Editor</h1>
+        </div>
+      </div>
+      <div class="toolbar">
+        <label class="toggle" title="Toggle light/dark">
+          <input id="themeSwitch" type="checkbox" />
+          <span class="label" id="themeLabel">Light</span>
+          <div aria-hidden="true" class="dot"></div>
+        </label>
+      </div>
+    </header>
+
+    <nav class="navBar">
+      <a href="/">Home</a>
+      <a href="/map">Map</a>
+      <a href="/canview">CAN View</a>
+      <a href="/diag">Diagnostics</a>
+      <a href="/ota">OTA</a>
+    </nav>
+
+    <main>
+      <div class="panel">
+        <div class="grid">
+          <table id="mapTable"></table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="row">
+          <select id="mapSelect" class="grow"></select>
+          <button id="btnRefresh">Refresh</button>
+          <button id="btnLoadMap">Load selected</button>
+          <input id="mapName" type="text" placeholder="Save as name" class="grow" />
+          <button id="btnSaveMap">Save as</button>
+          <button id="btnDeleteMap">Delete</button>
+        </div>
+        <div class="row">
+          <button id="btnLoad">Load current</button>
+          <button id="btnSave">Save current</button>
+          <button id="btnDownload">Download TXT</button>
+          <label><input id="fileInput" type="file" accept=".txt" /> Upload TXT</label>
+          <span class="status" id="status"></span>
+        </div>
+        <div class="row">
+          <div>
+            <div class="sub">Speed bins</div>
+            <div class="bins" id="speedBins"></div>
+          </div>
+          <div>
+            <div class="sub">Throttle bins</div>
+            <div class="bins" id="throttleBins"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <footer class="siteFooter">OpenHaldex-S3 by SpringfieldVW.com</footer>
+
+    <script src="/scripts.js?v=7"></script>
+  </body>
+</html>

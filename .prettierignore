@@ -1,0 +1,7 @@
+﻿.pio/
+.vscode/
+boards/
+lib/
+*.bin
+*.elf
+*.map
