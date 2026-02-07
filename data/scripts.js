@@ -18,6 +18,7 @@ function initTheme() {
   }
 }
 
+// Entrypoint: selects per-page initializer using body data-page attribute.
 function initApp() {
   initTheme();
   const page = document.body.dataset.page;
@@ -30,6 +31,7 @@ function initApp() {
 
 document.addEventListener("DOMContentLoaded", initApp);
 
+// Utility: normalize map labels from filesystem paths.
 function nameFromPath(path) {
   if (!path) return "";
   const base = path.split("/").pop() || path;
@@ -37,18 +39,24 @@ function nameFromPath(path) {
   return dot > 0 ? base.slice(0, dot) : base;
 }
 
+// Utility: quick extension extraction for map list display.
 function formatFromPath(path) {
   if (!path) return "";
   const dot = path.lastIndexOf(".");
   return dot > 0 ? path.slice(dot + 1) : "";
 }
 
+// Shared fetch helper that enforces HTTP status checks before JSON parse.
 async function fetchJson(url, options) {
   const res = await fetch(url, options);
   if (!res.ok) throw new Error("HTTP " + res.status);
   return res.json();
 }
 
+// Home page controller:
+// - controller/broadcast toggles
+// - live speed/throttle gauges
+// - engagement bar + map quick load
 function initHomePage() {
   const statusEl = document.getElementById("status");
   const mapSelect = document.getElementById("mapSelect");
@@ -100,7 +108,11 @@ function initHomePage() {
       const tel = data.telemetry || {};
       setGauge(speedNeedle, speedValueEl, tel.speed, 200);
       setGauge(throttleNeedle, throttleValueEl, tel.throttle, 100);
-      setEngagement(tel.haldexEngagementRaw ?? tel.haldexEngagement ?? tel.act);
+      // Prefer the same engagement source shown on diagnostics; fall back only if needed.
+      const engagementCandidate = [tel.haldexEngagement, tel.act, tel.haldexEngagementRaw]
+        .map((v) => Number(v))
+        .find((v) => Number.isFinite(v) && v >= 0);
+      setEngagement(engagementCandidate);
     } catch (e) {
       modeStatus.textContent = "Status failed: " + e.message;
     }
@@ -189,6 +201,10 @@ function initHomePage() {
   setInterval(refreshStatus, 1000);
 }
 
+// Map editor controller:
+// - bin editors + lock table
+// - active-cell tracer from live telemetry
+// - map list/load/save/import/export operations
 function initMapPage() {
   const defaultSpeed = [0, 5, 10, 20, 40, 60, 80, 100, 140];
   const defaultThrottle = [0, 5, 10, 20, 40, 60, 80];
@@ -509,11 +525,14 @@ function initMapPage() {
   setInterval(refreshTrace, 250);
 }
 
+// CAN view controller:
+// - decoded/raw polling with bus + token filters
+// - optional safe capture mode toggle
+// - one-shot 30s text dump download
 function initCanviewPage() {
   const nameAliases = {
-    Geschwindigkeit__Kombi_1_: "Vehicle speed",
-    Angezeigte_Geschwindigkeit: "Displayed speed",
-    Motordrehzahl: "Engine RPM",
+    Motordrehzahl: "Engine speed",
+    Lastsignal: "Engine load",
     Fahrpedalwert_oder_Drosselklapp: "Throttle position",
     Ladedruck: "Boost pressure",
     Kuehlmitteltemp__4_1__Kombi_2_: "Coolant temp",
@@ -539,13 +558,33 @@ function initCanviewPage() {
   }
 
   let timer = null;
+  let captureActive = false;
+  let lastData = { decoded: [], raw: [] };
+
   const statusEl = document.getElementById("status");
+  const captureStatusEl = document.getElementById("captureStatus");
   const decodedBody = document.querySelector("#decodedTable tbody");
   const rawBody = document.querySelector("#rawTable tbody");
   const busFilterEl = document.getElementById("busFilter");
+  const filterEl = document.getElementById("filter");
+  const presetEl = document.getElementById("diagPreset");
+  const captureBtn = document.getElementById("btnCapture");
 
   function setStatus(msg) {
     statusEl.textContent = msg || "";
+  }
+
+  function setCaptureStatus(msg) {
+    if (captureStatusEl) captureStatusEl.textContent = msg || "";
+  }
+
+  function updateCaptureUi() {
+    if (captureBtn) {
+      captureBtn.textContent = captureActive ? "Diagnostic Capture: On" : "Diagnostic Capture: Off";
+    }
+    setCaptureStatus(
+      captureActive ? "Capture mode active: Controller OFF + Broadcast ON (settings locked)" : ""
+    );
   }
 
   function busMatches(item, busFilter) {
@@ -558,13 +597,73 @@ function initCanviewPage() {
     return false;
   }
 
-  let lastData = { decoded: [], raw: [] };
+  function normalizeToken(token) {
+    const t = String(token || "")
+      .trim()
+      .toLowerCase();
+    if (!t) return "";
+    return t.startsWith("0x") ? t.slice(2) : t;
+  }
+
+  function splitTokens(text) {
+    const input = String(text || "").trim();
+    if (!input) return [];
+    return input
+      .split(/\s+/)
+      .map(normalizeToken)
+      .filter((t) => t.length > 0);
+  }
+
+  function mergeTokens(existing, extra) {
+    const seen = new Set();
+    const out = [];
+    [...splitTokens(existing), ...splitTokens(extra)].forEach((t) => {
+      if (!seen.has(t)) {
+        seen.add(t);
+        out.push(t);
+      }
+    });
+    return out.join(" ");
+  }
+
+  function addSelectedPreset() {
+    if (!filterEl || !presetEl || !presetEl.value) return;
+    filterEl.value = mergeTokens(filterEl.value, presetEl.value);
+    presetEl.value = "";
+    redraw();
+  }
+
+  function decodedMatches(item, tokens) {
+    if (!tokens || !tokens.length) return true;
+    const base = String(item.name || "");
+    const pretty = formatName(base);
+    const idNum = Number(item.id);
+    const idDec = String(item.id || "").toLowerCase();
+    const idHex = Number.isFinite(idNum) ? idNum.toString(16).toLowerCase() : "";
+    const fields = [
+      idDec,
+      idHex,
+      base.toLowerCase(),
+      pretty.toLowerCase(),
+      String(item.value || "").toLowerCase(),
+    ];
+    return tokens.some((t) => fields.some((field) => field.includes(t)));
+  }
+
+  function rawMatches(item, tokens) {
+    if (!tokens || !tokens.length) return true;
+    const idNum = Number(item.id);
+    const idDec = String(item.id || "").toLowerCase();
+    const idHex = Number.isFinite(idNum) ? idNum.toString(16).toLowerCase() : "";
+    const fields = [idDec, idHex, String(item.data || "").toLowerCase()];
+    return tokens.some((t) => fields.some((field) => field.includes(t)));
+  }
 
   function redraw() {
-    const filter = (document.getElementById("filter").value || "").toLowerCase();
+    const filterTokens = splitTokens(filterEl ? filterEl.value : "");
     const busFilter = busFilterEl ? busFilterEl.value : "all";
-    renderDecoded(decodedBody, lastData.decoded || [], filter, busFilter);
-    renderRaw(rawBody, lastData.raw || [], busFilter);
+    renderDecoded(decodedBody, lastData.decoded || [], filterTokens, busFilter);
+    renderRaw(rawBody, lastData.raw || [], busFilter, filterTokens);
   }
 
   async function poll() {
@@ -613,20 +712,38 @@ function initCanviewPage() {
       setStatus("Dump failed: " + e.message);
     }
   }
-  function renderDecoded(body, list, filter, busFilter) {
+
+  async function refreshCaptureState() {
+    try {
+      const data = await fetchJson("/api/canview/capture");
+      captureActive = !!data.active;
+      updateCaptureUi();
+    } catch (e) {
+      setCaptureStatus("Capture status failed: " + e.message);
+    }
+  }
+
+  async function toggleCaptureMode() {
+    try {
+      setCaptureStatus("Switching capture mode...");
+      const data = await fetchJson("/api/canview/capture", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ active: !captureActive }),
+      });
+      captureActive = !!data.active;
+      updateCaptureUi();
+      setStatus(captureActive ? "Capture mode enabled" : "Capture mode disabled");
+      await poll();
+    } catch (e) {
+      setCaptureStatus("Capture switch failed: " + e.message);
+    }
+  }
+
+  function renderDecoded(body, list, filterTokens, busFilter) {
     body.innerHTML = "";
     list
-      .filter((item) => {
-        if (!busMatches(item, busFilter)) return false;
-        if (!filter) return true;
-        const base = String(item.name || "");
-        const pretty = formatName(base);
-        return (
-          String(item.id).includes(filter) ||
-          base.toLowerCase().includes(filter) ||
-          pretty.toLowerCase().includes(filter)
-        );
-      })
+      .filter((item) => busMatches(item, busFilter) && decodedMatches(item, filterTokens))
       .forEach((item) => {
         const tr = document.createElement("tr");
         const baseName = item.name || "";
@@ -638,10 +755,10 @@ function initCanviewPage() {
       });
   }
 
-  function renderRaw(body, list, busFilter) {
+  function renderRaw(body, list, busFilter, filterTokens) {
     body.innerHTML = "";
     list
-      .filter((item) => busMatches(item, busFilter))
+      .filter((item) => busMatches(item, busFilter) && rawMatches(item, filterTokens))
       .forEach((item) => {
         const tr = document.createElement("tr");
         const dir = String(item.dir || "").toLowerCase();
@@ -664,16 +781,29 @@ function initCanviewPage() {
     timer = setInterval(poll, interval);
     poll();
   };
-  if (busFilterEl) busFilterEl.onchange = poll;
-  const filterInput = document.getElementById("filter");
-  if (filterInput) filterInput.oninput = redraw;
+
+  if (busFilterEl) {
+    busFilterEl.onchange = () => {
+      redraw();
+      poll();
+    };
+  }
+  if (filterEl) filterEl.oninput = redraw;
+  if (presetEl) presetEl.onchange = addSelectedPreset;
+
   document.getElementById("btnStop").onclick = () => {
     if (timer) clearInterval(timer);
     timer = null;
   };
+
   const dumpBtn = document.getElementById("btnDump30");
   if (dumpBtn) dumpBtn.onclick = downloadDump;
+  if (captureBtn) captureBtn.onclick = toggleCaptureMode;
+
+  refreshCaptureState();
 }
+// Diagnostics page:
+// combines status, telemetry, frame diagnostics, and network state.
 function initDiagPage() {
   const el = (id) => document.getElementById(id);
   const statusEl = el("status");
@@ -804,6 +934,10 @@ function initDiagPage() {
   setInterval(poll, 1000);
 }
 
+// OTA page:
+// - local file upload flow
+// - hotspot credential management
+// - online update check/install polling UI
 function initOtaPage() {
   const form = document.getElementById("otaForm");
   const statusEl = document.getElementById("status");
@@ -993,9 +1127,3 @@ function initOtaPage() {
   refreshUpdate();
   setInterval(refreshUpdate, 2000);
 }
-
-
-
-
-
-

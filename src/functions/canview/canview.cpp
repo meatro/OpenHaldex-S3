@@ -82,7 +82,8 @@ static void canview_copy_frame(canview_frame_t& dst, const twai_message_t& msg, 
   }
 }
 
-static void canview_update_cache(canview_frame_t* cache, uint8_t cache_size, const twai_message_t& msg, bool generated) {
+static void canview_update_cache(canview_frame_t* cache, uint8_t cache_size, const twai_message_t& msg,
+                                 bool generated) {
   uint32_t key = canview_make_key(msg);
   int oldest_index = 0;
   uint32_t oldest_ts = cache[0].ts;
@@ -163,7 +164,6 @@ static bool canview_find_frame(uint32_t id, const canview_frame_t* cache, uint8_
   }
   return false;
 }
-
 
 bool canviewGetLastTxFrame(uint8_t bus, uint32_t id, canview_last_tx_t& out) {
   out.found = false;
@@ -426,10 +426,6 @@ String canviewBuildJson(uint16_t decoded_limit, uint8_t raw_limit, const String&
 
   return json;
 }
-
-
-
-
 
 String canviewBuildDumpText(uint32_t window_ms, const String& bus_filter) {
   String filter = bus_filter;

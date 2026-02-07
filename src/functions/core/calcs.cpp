@@ -6,8 +6,9 @@
 #include "functions/can/can_id.h"
 #include "functions/can/standalone_can.h"
 
-// Determines if AWD lock should be active based on current mode, speed, and throttle thresholds
-// Only executed when in MODE_FWD/MODE_5050/MODE_CUSTOM
+// Gate for any lock request generation.
+// - MODE_MAP always uses the map table.
+// - Preset/custom modes apply pedal/speed threshold rules.
 static inline bool lock_enabled() {
   if (state.mode == MODE_MAP) {
     return true;
@@ -41,8 +42,8 @@ static inline bool lock_enabled() {
 }
 
 static float get_map_lock_target() {
-  // Calculate lock target from 2D map using bilinear interpolation
-  // Maps throttle % and speed to desired lock percentage
+  // 2D throttle/speed map with bilinear interpolation between bins.
+  // Result is normalized to a lock percent in [0..100].
   if (!lock_enabled()) {
     return 0;
   }
@@ -116,10 +117,9 @@ static float get_map_lock_target() {
   return v;
 }
 
-// Only executed when in MODE_FWD/MODE_5050/MODE_CUSTOM
+// Computes desired lock percent before generation-specific frame shaping.
+// This is the single source of "requested lock" used by CAN frame mutation.
 float get_lock_target_adjustment() {
-  // Handle FWD and 5050 modes.
-  // Handle FWD and 5050 modes.
   switch (state.mode) {
   case MODE_FWD:
     return 0;
@@ -154,60 +154,18 @@ float get_lock_target_adjustment() {
   default:
     return 0;
   }
-
-  // Getting here means it's in not FWD or 5050/7525.
-
-  // Check if locking is necessary.
-  if (!lock_enabled()) {
-    return 0;
-  }
-
-  // Find the pair of lockpoints between which the vehicle speed falls.
-  lockpoint_t lp_lower = state.custom_mode.lockpoints[0];
-  lockpoint_t lp_upper = state.custom_mode.lockpoints[state.custom_mode.lockpoint_count - 1];
-
-  // Look for the lockpoint above the current vehicle speed.
-  for (uint8_t i = 0; i < state.custom_mode.lockpoint_count; i++) {
-    if (received_vehicle_speed <= state.custom_mode.lockpoints[i].speed) {
-      lp_upper = state.custom_mode.lockpoints[i];
-      lp_lower = state.custom_mode.lockpoints[(i == 0) ? 0 : (i - 1)];
-      break;
-    }
-  }
-
-  // Handle the case where the vehicle speed is lower than the lowest lockpoint.
-  if (received_vehicle_speed <= lp_lower.speed) {
-    return lp_lower.lock;
-  }
-
-  // Handle the case where the vehicle speed is higher than the highest lockpoint.
-  if (received_vehicle_speed >= lp_upper.speed) {
-    return lp_upper.lock;
-  }
-
-  // In all other cases, interpolation is necessary.
-  float inter = (float)(lp_upper.speed - lp_lower.speed) / (float)(received_vehicle_speed - lp_lower.speed);
-
-  // Calculate the target.
-  float target = lp_lower.lock + ((float)(lp_upper.lock - lp_lower.lock) / inter);
-  // DEBUG("lp_upper:%d@%d lp_lower:%d@%d speed:%d target:%0.2f", lp_upper.lock, lp_upper.speed, lp_lower.lock,
-  // lp_lower.speed, received_vehicle_speed, target);
-  return target;
 }
 
-// Only executed when in MODE_FWD/MODE_5050/MODE_CUSTOM
+// Converts a generation-specific control byte into a mode-adjusted byte.
+// `invert=true` is used by frames where lower encoded values mean higher lock.
 uint8_t get_lock_target_adjusted_value(uint8_t value, bool invert) {
-  // Handle 5050 mode.
   if (lock_target == 100) {
-    // is this needed?  Should be caught in get_lock_target_adjustment
     if (lock_enabled()) {
       return (invert ? (0xFE - value) : value);
     }
     return (invert ? 0xFE : 0x00);
   }
 
-  // Handle FWD and CUSTOM modes.
-  // No correction is necessary if the target is already 0.
   if (lock_target == 0) {
     return (invert ? 0xFE : 0x00);
   }
@@ -219,5 +177,3 @@ uint8_t get_lock_target_adjusted_value(uint8_t value, bool invert) {
   }
   return (invert ? 0xFE : 0x00);
 }
-
-// Only executed when in MODE_FWD/MODE_5050/MODE_CUSTOM

@@ -433,9 +433,18 @@ bool storageLoadMapPath(const String& path) {
       save_map_to_fs();
     }
   } else if (local.endsWith(".txt")) {
-    // TXT maps are read-only presets from LittleFS root. Load into RAM and persist to current.json
+    // TXT maps are read-only presets from /maps. Support legacy root paths transparently.
+    String txtPath = local;
+    if (!LittleFS.exists(txtPath)) {
+      String fallback = String(MAP_DIR) + "/" + txtPath;
+      fallback.replace("//", "/");
+      if (LittleFS.exists(fallback)) {
+        txtPath = fallback;
+      }
+    }
+    // Load into RAM and persist to current.json
     // so boot and "save current" continue to work predictably.
-    ok = load_map_from_txt_file(local.c_str());
+    ok = load_map_from_txt_file(txtPath.c_str());
     if (ok) {
       storageSetCurrentMapPath(MAP_FILE);
       save_map_to_fs();
@@ -496,6 +505,7 @@ void storageListMaps(JsonArray out) {
   if (!fs_ready)
     return;
 
+  bool hasMapDirTxtPresets = false;
   File maps = LittleFS.open(MAP_DIR);
   if (maps && maps.isDirectory()) {
     File file = maps.openNextFile();
@@ -513,28 +523,35 @@ void storageListMaps(JsonArray out) {
           if (path != MAP_FILE) {
             add_map_entry(out, name, path, "json", false);
           }
+        } else if (path.endsWith(".txt")) {
+          String base = path.substring(path.lastIndexOf('/') + 1);
+          String name = base.substring(0, base.length() - 4);
+          add_map_entry(out, name, path, "txt", true);
+          hasMapDirTxtPresets = true;
         }
       }
       file = maps.openNextFile();
     }
   }
 
-  File root = LittleFS.open("/");
-  if (root) {
-    File file = root.openNextFile();
-    while (file) {
-      if (!file.isDirectory()) {
-        String path = file.name();
-        if (!path.startsWith("/")) {
-          path = "/" + path;
+  if (!hasMapDirTxtPresets) {
+    File root = LittleFS.open("/");
+    if (root) {
+      File file = root.openNextFile();
+      while (file) {
+        if (!file.isDirectory()) {
+          String path = file.name();
+          if (!path.startsWith("/")) {
+            path = "/" + path;
+          }
+          if (path.endsWith(".txt")) {
+            String base = path.substring(path.lastIndexOf('/') + 1);
+            String name = base.substring(0, base.length() - 4);
+            add_map_entry(out, name, path, "txt", true);
+          }
         }
-        if (path.endsWith(".txt")) {
-          String base = path.substring(path.lastIndexOf('/') + 1);
-          String name = base.substring(0, base.length() - 4);
-          add_map_entry(out, name, path, "txt", true);
-        }
+        file = root.openNextFile();
       }
-      file = root.openNextFile();
     }
   }
 }
@@ -564,4 +581,3 @@ bool storageGetWifiStaEnabled() {
 void storageSetWifiStaEnabled(bool enabled) {
   pref.putBool(WIFI_STA_ENABLE_KEY, enabled);
 }
-

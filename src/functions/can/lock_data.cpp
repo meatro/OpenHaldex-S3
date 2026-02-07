@@ -6,12 +6,15 @@
 #include "functions/can/can_id.h"
 #include "functions/can/standalone_can.h"
 
+// Core frame mutation entry point used when controller is enabled.
+// Input frame is chassis-origin traffic and may be modified in-place
+// depending on Haldex generation and active mode.
 void getLockData(twai_message_t& rx_message_chs) {
-  // Get the initial lock target.
+  // Requested lock value (0..100) computed from mode thresholds/map.
   lock_target = get_lock_target_adjustment();
   awd_state.requested = lock_target;
 
-  // Edit the frames if configured as Gen1...
+  // Gen1 strategy: overwrite key motor/brake signals that the AWD ECU expects.
   if (haldexGeneration == 1) {
     switch (rx_message_chs.identifier) {
     case MOTOR1_ID:
@@ -73,8 +76,8 @@ void getLockData(twai_message_t& rx_message_chs) {
     }
   }
 
-  // Edit the frames if configured as Gen2...
-  if (haldexGeneration == 2) { // Edit the frames if configured as Gen2.  Currently copied from Gen4...
+  // Gen2 strategy: currently mirrors Gen4 baseline with byte-level differences noted.
+  if (haldexGeneration == 2) { // Gen2 baseline currently mirrors Gen4 with noted byte differences.
     switch (rx_message_chs.identifier) {
     case MOTOR1_ID:
       rx_message_chs.data[1] = get_lock_target_adjusted_value(0xFE, false);
@@ -110,7 +113,7 @@ void getLockData(twai_message_t& rx_message_chs) {
       break;
     }
   }
-  // Edit the frames if configured as Gen4...
+  // Gen4 strategy: full byte-level shaping across steering, motor, and brake frames.
   if (haldexGeneration == 4) {
     switch (rx_message_chs.identifier) {
     case mLW_1:

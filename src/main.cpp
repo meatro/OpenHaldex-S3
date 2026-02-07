@@ -1,12 +1,13 @@
 #include <Arduino.h>
 #include <WiFi.h>
+#include <WiFiClientSecure.h>
+#include <HTTPClient.h>
 #include <ESPmDNS.h>
 #include <ESPAsyncWebServer.h>
 
 #include "functions/api/api.h"
 #include "functions/can/can.h"
 #include "functions/tasks/tasks.h"
-#include "functions/io/io.h"
 #include "functions/storage/storage.h"
 #include "functions/web/web.h"
 #include "functions/net/update.h"
@@ -16,18 +17,35 @@ static AsyncWebServer server(80);
 static const char* AP_SSID = "OpenHaldex-S3";
 static const char* MDNS_NAME = "openhaldex";
 static const uint32_t WIFI_STA_TIMEOUT_MS = 15000;
+static const char* OTA_VERSION_URL = "https://www.springfieldvw.com/openhaldex-s3/version.json";
 static volatile bool g_internet_ok = false;
 
 bool wifiInternetOk() {
   return g_internet_ok;
 }
 
+// Lightweight connectivity probe for OTA status.
+// Only runs DNS lookup when STA is connected.
 static void internetCheckTask(void* arg) {
   (void)arg;
   for (;;) {
     if (WiFi.status() == WL_CONNECTED) {
-      IPAddress ip;
-      g_internet_ok = WiFi.hostByName("example.com", ip);
+      WiFiClientSecure client;
+      client.setTimeout(8000);
+      client.setHandshakeTimeout(8000);
+      client.setInsecure();
+      HTTPClient http;
+      http.setTimeout(8000);
+      http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
+      http.setRedirectLimit(3);
+
+      if (http.begin(client, OTA_VERSION_URL)) {
+        int code = http.GET();
+        g_internet_ok = (code == 200);
+        http.end();
+      } else {
+        g_internet_ok = false;
+      }
     } else {
       g_internet_ok = false;
     }
@@ -35,6 +53,7 @@ static void internetCheckTask(void* arg) {
   }
 }
 
+// Advertise openhaldex.local on the currently active network interface(s).
 static void startMdns() {
   MDNS.end();
   delay(50);
@@ -44,11 +63,11 @@ static void startMdns() {
       Serial.println("mDNS: http://openhaldex.local");
       return;
     }
-    delay(200);
   }
   Serial.println("mDNS start failed");
 }
 
+// AP fallback path used when STA is disabled or hotspot connection fails.
 static void startApOnly() {
   WiFi.mode(WIFI_AP);
   WiFi.setSleep(false);
@@ -59,6 +78,7 @@ static void startApOnly() {
   startMdns();
 }
 
+// Scan helper to locate saved hotspot channel for faster/cleaner association.
 static int findSsidChannel(const String& ssid) {
   int count = WiFi.scanNetworks(/*async=*/false, /*show_hidden=*/true);
   if (count <= 0) {
@@ -80,6 +100,10 @@ static int findSsidChannel(const String& ssid) {
   return 0;
 }
 
+// Boot-time network policy:
+// - If no saved creds => AP only
+// - If STA enabled and hotspot reachable => STA+AP
+// - Else fallback to AP only
 static void wifiStart() {
   String ssid;
   String pass;
@@ -120,7 +144,7 @@ static void wifiStart() {
   WiFi.mode(WIFI_STA);
   WiFi.setSleep(false);
   WiFi.setAutoReconnect(false);
-  // Force DNS while keeping DHCP
+  // Keep DHCP but force resolver selection for hotspot edge cases.
   WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, IPAddress(8, 8, 8, 8), IPAddress(1, 1, 1, 1));
   Serial.print("STA connecting to SSID: ");
   Serial.println(ssid);
@@ -134,7 +158,6 @@ static void wifiStart() {
 
   uint32_t start = millis();
   while (WiFi.status() != WL_CONNECTED && (millis() - start) < WIFI_STA_TIMEOUT_MS) {
-    delay(200);
   }
 
   if (WiFi.status() == WL_CONNECTED) {
@@ -156,11 +179,11 @@ static void wifiStart() {
   }
 }
 
+// Runtime apply path used by /api/wifi settings updates.
 static void wifiApplyTask(void* arg) {
   (void)arg;
   WiFi.disconnect(true, true);
   WiFi.mode(WIFI_OFF);
-  delay(200);
   wifiStart();
   vTaskDelete(nullptr);
 }
@@ -170,24 +193,23 @@ void wifiApplySettings() {
 }
 
 void setup() {
-  Serial.begin(115200);
-  delay(2000);
-  Serial.println("\n\n=== OpenHaldex S3 Starting ===");
 
+  // Bring CAN online as early as possible (after transceiver enable pins).
+  canInit();
+
+  Serial.begin(115200);
+  Serial.println("\n\n=== OpenHaldex S3 Starting ===");
+  
   storageInit();
   storageLoad();
 
-  setupIO();
-  setupButtons();
+  tasksInit();
 
   wifiStart();
   updateInit();
   xTaskCreatePinnedToCore(internetCheckTask, "internetCheck", 4096, nullptr, 1, nullptr, 1);
 
-  canInit();
-  tasksInit();
   webInit(server);
-
   setupApi(server);
   server.begin();
 }

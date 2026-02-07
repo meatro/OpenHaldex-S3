@@ -4,7 +4,7 @@
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title>OpenHaldex Map Editor</title>
-    <link rel="stylesheet" href="/styles.css?v=7" />
+    <link rel="stylesheet" href="/styles.css?v=9" />
   </head>
   <body data-page="map">
     <header class="appHeader">
@@ -33,42 +33,62 @@
 
     <main>
       <div class="panel">
+        <div class="hint">Live map table (active cell follows speed/throttle).</div>
         <div class="grid">
           <table id="mapTable"></table>
         </div>
       </div>
 
       <div class="panel">
-        <div class="row">
-          <select id="mapSelect" class="grow"></select>
-          <button id="btnRefresh">Refresh</button>
+        <div class="row mapRow">
+          <label class="grow"
+            >Map file
+            <select id="mapSelect" class="grow"></select
+          ></label>
           <button id="btnLoadMap">Load selected</button>
-          <input id="mapName" type="text" placeholder="Save as name" class="grow" />
-          <button id="btnSaveMap">Save as</button>
-          <button id="btnDeleteMap">Delete</button>
-        </div>
-        <div class="row">
+          <button id="btnRefresh">Refresh</button>
           <button id="btnLoad">Load current</button>
           <button id="btnSave">Save current</button>
-          <button id="btnDownload">Download TXT</button>
-          <label><input id="fileInput" type="file" accept=".txt" /> Upload TXT</label>
-          <span class="status" id="status"></span>
         </div>
-        <div class="row">
-          <div>
-            <div class="sub">Speed bins</div>
-            <div class="bins" id="speedBins"></div>
-          </div>
-          <div>
-            <div class="sub">Throttle bins</div>
-            <div class="bins" id="throttleBins"></div>
-          </div>
+
+        <div class="row mapRow">
+          <label class="grow"
+            >Save as <input id="mapName" type="text" placeholder="new map name" class="grow"
+          /></label>
+          <button id="btnSaveMap">Save as new</button>
+          <button id="btnDeleteMap">Delete selected</button>
         </div>
+
+        <details class="mapAdvanced">
+          <summary>Import / Export</summary>
+          <div class="row mapRow">
+            <button id="btnDownload">Download TXT</button>
+            <label class="fileRow"
+              >Upload TXT <input id="fileInput" type="file" accept=".txt"
+            /></label>
+          </div>
+        </details>
+
+        <details class="mapAdvanced">
+          <summary>Bin Configuration</summary>
+          <div class="row mapBinsRow">
+            <div>
+              <div class="sub">Speed bins</div>
+              <div class="bins" id="speedBins"></div>
+            </div>
+            <div>
+              <div class="sub">Throttle bins</div>
+              <div class="bins" id="throttleBins"></div>
+            </div>
+          </div>
+        </details>
+
+        <span class="status" id="status"></span>
       </div>
     </main>
 
     <footer class="siteFooter">OpenHaldex-S3 by SpringfieldVW.com</footer>
 
-    <script src="/scripts.js?v=7"></script>
+    <script src="/scripts.js?v=9"></script>
   </body>
 </html>

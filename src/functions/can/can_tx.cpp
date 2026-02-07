@@ -28,7 +28,9 @@ void broadcastOpenHaldex(void* arg) {
     broadcast_frame.data[6] = (uint8_t)state.mode;
     broadcast_frame.data[7] = (uint8_t)received_pedal_value;
 
-    chassis_can_send(broadcast_frame, (10 / portTICK_PERIOD_MS));
+    if (broadcastOpenHaldexOverCAN) {
+      chassis_can_send(broadcast_frame, (10 / portTICK_PERIOD_MS));
+    }
     vTaskDelay(OH_BROADCAST_REFRESH_MS / portTICK_PERIOD_MS);
   }
 }

@@ -7,11 +7,13 @@
 #include "functions/core/calcs.h"
 #include "functions/can/can_id.h"
 #include "functions/canview/canview.h"
+#include "functions/canview/vw_pq_chassis_dbc.h"
 #include "functions/can/can_state.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
 
+// Frame equality helper used to mark generated (mutated) traffic for CAN View.
 static bool can_messages_equal(const twai_message_t& a, const twai_message_t& b) {
   if (a.identifier != b.identifier)
     return false;
@@ -28,9 +30,15 @@ static bool can_messages_equal(const twai_message_t& a, const twai_message_t& b)
   return true;
 }
 
+// Chassis-side receive loop:
+// - caches incoming chassis traffic for CAN View
+// - updates core telemetry (throttle/rpm/speed)
+// - mutates pass-through frames when controller is enabled
+// - forwards toward Haldex bus
 void parseCAN_chs(void* arg) {
-  // FreeRTOS task: Process chassis CAN bus messages
-  // Extracts telemetry (speed, RPM, throttle) and forwards diagnostics to Haldex bus in standalone mode
+  static uint32_t last_abs_speed_ms = 0;
+  static bool abs_speed_valid = false;
+  static const uint32_t k_abs_speed_timeout_ms = 500;
 
   while (1) {
 #if detailedDebugStack
@@ -49,7 +57,7 @@ void parseCAN_chs(void* arg) {
         case diagnostics_3_ID:
         case diagnostics_4_ID:
         case diagnostics_5_ID:
-          // Forward diagnostic messages to Haldex CAN bus
+          // Standalone mode keeps diagnostic gateway traffic alive across buses.
           tx_msg_hdx() = rx_msg_chs();
           tx_msg_hdx().extd = rx_msg_chs().extd;
           tx_msg_hdx().rtr = rx_msg_chs().rtr;
@@ -67,19 +75,35 @@ void parseCAN_chs(void* arg) {
           received_vehicle_rpm = ((rx_msg_chs().data[3] << 8) | rx_msg_chs().data[2]) * 0.25f;
           break;
 
-        case MOTOR2_ID:
-          received_vehicle_speed = rx_msg_chs().data[3] * 128 / 100;
+        case BRAKES1_ID: {
+          // ABS aggregate vehicle speed (BR1_Wheel_Speed_kmh, 0.01 km/h units).
+          uint64_t raw = vw_pq_dbc_extract_raw(rx_msg_chs().data, 17, 15, 1);
+          received_vehicle_speed = (uint16_t)((raw + 50) / 100);
           vehicle_state.speed = received_vehicle_speed;
+          last_abs_speed_ms = millis();
+          abs_speed_valid = true;
+          break;
+        }
+
+        case MOTOR2_ID:
+          // Fallback only when ABS speed is missing/stale.
+          if (!abs_speed_valid || (millis() - last_abs_speed_ms) > k_abs_speed_timeout_ms) {
+            received_vehicle_speed = rx_msg_chs().data[3] * 128 / 100;
+            vehicle_state.speed = received_vehicle_speed;
+          }
           break;
 
         case OPENHALDEX_EXTERNAL_CONTROL_ID:
-          // Only allow mode via controller enable toggle
+          // External mode messages are intentionally ignored for mode selection.
+          // Main UI toggle is authoritative: enabled=MAP, disabled=STOCK.
           state.mode = disableController ? MODE_STOCK : MODE_MAP;
           break;
         }
 
         bool generatedFrame = false;
         twai_message_t original = rx_msg_chs();
+
+        // STOCK: bridge unchanged. MAP: mutate known control frames for selected generation.
         if (state.mode != MODE_STOCK) {
           if (haldexGeneration == 1 || haldexGeneration == 2 || haldexGeneration == 4) {
             getLockData(rx_msg_chs());
@@ -101,6 +125,10 @@ void parseCAN_chs(void* arg) {
   }
 }
 
+// Haldex-side receive loop:
+// - caches incoming Haldex traffic for CAN View
+// - derives telemetry/status flags used by diagnostics UI
+// - optionally rebroadcasts Haldex frames onto chassis bus
 void parseCAN_hdx(void* arg) {
   while (1) {
 #if detailedDebugStack
@@ -110,6 +138,7 @@ void parseCAN_hdx(void* arg) {
       lastCANHaldexTick = millis();
       canviewCacheFrame(rx_msg_hdx(), 1);
 
+      // Engagement extraction is generation-specific and follows legacy OpenHaldex behavior.
       if (haldexGeneration == 1) {
         received_haldex_engagement_raw = rx_msg_hdx().data[1];
         received_haldex_engagement = map(received_haldex_engagement_raw, 128, 198, 0, 100);
@@ -133,6 +162,7 @@ void parseCAN_hdx(void* arg) {
       received_coupling_open = (received_haldex_state & (1 << 3));
       received_speed_limit = (received_haldex_state & (1 << 6));
 
+      // Forward Haldex traffic onto chassis CAN (bridge behavior).
       chassis_can_send(rx_msg_hdx(), (10 / portTICK_PERIOD_MS));
     }
 

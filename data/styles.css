@@ -220,6 +220,91 @@ button:active {
   transform: translateY(1px);
 }
 
+.canviewRow {
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.canviewRow:last-child {
+  margin-bottom: 0;
+}
+.canviewRow label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.canviewRow input,
+.canviewRow select {
+  font-size: 12px;
+  padding: 6px 10px;
+}
+#interval,
+#decodedLimit,
+#rawLimit {
+  width: 92px;
+}
+.canviewAdvanced {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.canviewAdvanced > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.mapRow {
+  gap: 8px;
+  margin-bottom: 8px;
+}
+.mapRow:last-child {
+  margin-bottom: 0;
+}
+.mapRow label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.mapAdvanced {
+  margin-top: 8px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  padding: 8px 10px;
+  background: var(--panel);
+  box-shadow: var(--shadow);
+}
+.mapAdvanced > summary {
+  cursor: pointer;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.5px;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+.mapAdvanced[open] > summary {
+  margin-bottom: 8px;
+  color: var(--text);
+}
+.mapBinsRow {
+  align-items: flex-start;
+}
+.fileRow {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
 .status {
   font-size: 12px;
   color: var(--muted);
@@ -388,9 +473,12 @@ label input[type="file"] {
   content: "";
   position: absolute;
   inset: 0;
-  background: rgba(187, 10, 48, 0.32);
+  background: #bb0a30;
   border-radius: 6px;
   z-index: 0;
+}
+.dark .map-active::before {
+  background: #bb0a30;
 }
 .map-active input {
   position: relative;
@@ -420,14 +508,18 @@ label input[type="file"] {
 }
 .gauge {
   position: relative;
-  width: 150px;
-  height: 150px;
+  --gauge-size: clamp(136px, 24vw, 208px);
+  width: var(--gauge-size);
+  height: var(--gauge-size);
   margin: 0 auto;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: var(--panel);
 }
 .gauge::after {
   content: "";
   position: absolute;
-  inset: 20px;
+  inset: 15.75%;
   background: var(--panel);
   border-radius: 50%;
   border: 1px solid var(--line);
@@ -435,79 +527,78 @@ label input[type="file"] {
 }
 .gaugeDial {
   position: absolute;
-  inset: 0;
+  inset: 5.5%;
   border-radius: 50%;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(187, 10, 48, 0.24);
   background:
-    radial-gradient(
-      circle at 50% 50%,
-      transparent 62%,
-      rgba(11, 18, 32, 0.08) 63%,
-      transparent 64%
-    ),
+    repeating-conic-gradient(from -120deg, #bb0a30 0deg 1.5deg, transparent 1.5deg 9deg),
+    radial-gradient(circle at 50% 50%, transparent 62%, #bb0a30 62% 64%, transparent 64%),
     repeating-conic-gradient(
       from -120deg,
-      rgba(107, 114, 128, 0.46) 0deg 2deg,
-      transparent 2deg 11deg
+      rgba(11, 18, 32, 0.12) 0deg 0.8deg,
+      transparent 0.8deg 9deg
     );
 }
 .gaugeDial::before {
   content: "";
   position: absolute;
-  inset: 8px;
+  inset: 4.2%;
   border-radius: 50%;
-  border: 3px solid rgba(187, 10, 48, 0.18);
-  border-top-color: rgba(187, 10, 48, 0.5);
-  border-right-color: rgba(187, 10, 48, 0.4);
+  border: 1px solid rgba(187, 10, 48, 0.4);
 }
 .dark .gaugeDial {
   background:
-    radial-gradient(
-      circle at 50% 50%,
-      transparent 62%,
-      rgba(230, 231, 234, 0.11) 63%,
-      transparent 64%
-    ),
+    repeating-conic-gradient(from -120deg, #d0103a 0deg 1.5deg, transparent 1.5deg 9deg),
+    radial-gradient(circle at 50% 50%, transparent 62%, #d0103a 62% 64%, transparent 64%),
     repeating-conic-gradient(
       from -120deg,
-      rgba(154, 163, 173, 0.45) 0deg 2deg,
-      transparent 2deg 11deg
+      rgba(230, 231, 234, 0.2) 0deg 0.8deg,
+      transparent 0.8deg 9deg
     );
 }
 .dark .gaugeDial::before {
-  border-color: rgba(208, 16, 58, 0.28);
-  border-top-color: rgba(208, 16, 58, 0.62);
-  border-right-color: rgba(208, 16, 58, 0.5);
+  border-color: rgba(208, 16, 58, 0.5);
 }
 .gaugeNeedle {
   position: absolute;
-  width: 2px;
-  height: 62px;
+  width: max(2px, calc(var(--gauge-size) * 0.02));
+  height: calc(var(--gauge-size) * 0.41);
   background: var(--brand);
   left: 50%;
-  top: 20px;
+  top: 15%;
   transform-origin: 50% 100%;
   transform: translateX(-50%) rotate(-120deg);
   z-index: 2;
   border-radius: 2px;
-  box-shadow: 0 0 6px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 4px rgba(0, 0, 0, 0.25);
   transition: transform 0.2s ease;
+}
+.gaugeNeedle::after {
+  content: "";
+  position: absolute;
+  width: max(6px, calc(var(--gauge-size) * 0.055));
+  height: max(6px, calc(var(--gauge-size) * 0.055));
+  left: 50%;
+  bottom: calc(var(--gauge-size) * -0.02);
+  transform: translateX(-50%);
+  border-radius: 50%;
+  background: var(--brand);
 }
 .gaugeValue {
   position: absolute;
-  bottom: 46px;
+  bottom: 30%;
   left: 0;
   right: 0;
-  font-size: 22px;
+  font-size: clamp(18px, 4vw, 23px);
   font-weight: 700;
   z-index: 2;
 }
 .gaugeUnit {
   position: absolute;
-  bottom: 28px;
+  bottom: 18%;
   left: 0;
   right: 0;
-  font-size: 12px;
+  font-size: clamp(11px, 2.3vw, 13px);
   color: var(--muted);
   z-index: 2;
 }

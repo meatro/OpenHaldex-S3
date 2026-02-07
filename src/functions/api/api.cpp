@@ -18,10 +18,23 @@ extern void wifiApplySettings();
 #define OPENHALDEX_VERSION "dev"
 #endif
 
+// Keep runtime mode enum valid when upgrading from older stored state.
 static void ensureDefaults() {
   if (state.mode >= openhaldex_mode_t_MAX) {
     state.mode = MODE_STOCK;
   }
+}
+
+// CAN View diagnostic capture mode forces a safe bridge state while collecting data.
+static bool canview_capture_active = false;
+static bool canview_capture_prev_valid = false;
+static bool canview_capture_prev_disable_controller = false;
+static bool canview_capture_prev_broadcast = true;
+
+static void canviewCaptureApplySafeState() {
+  disableController = true;
+  state.mode = MODE_STOCK;
+  broadcastOpenHaldexOverCAN = true;
 }
 
 static void sendJson(AsyncWebServerRequest* request, int code, const JsonDocument& doc) {
@@ -54,7 +67,6 @@ static void onJsonBody(AsyncWebServerRequest* request, uint8_t* data, size_t len
   }
 }
 
-
 static String frameDataHex(const canview_last_tx_t& f) {
   String out;
   out.reserve(3 * f.dlc);
@@ -67,6 +79,7 @@ static String frameDataHex(const canview_last_tx_t& f) {
   }
   return out;
 }
+// Aggregated status endpoint used by Home and Diagnostics pages.
 static void handleStatus(AsyncWebServerRequest* request) {
   JsonDocument doc;
 
@@ -74,6 +87,7 @@ static void handleStatus(AsyncWebServerRequest* request) {
   doc["mode"] = disableController ? "STOCK" : "MAP";
   doc["disableController"] = disableController;
   doc["broadcastOpenHaldexOverCAN"] = broadcastOpenHaldexOverCAN;
+  doc["canviewCaptureMode"] = canview_capture_active;
   doc["haldexGeneration"] = haldexGeneration;
   doc["uptimeMs"] = millis();
 
@@ -158,11 +172,23 @@ static void handleModeJson(AsyncWebServerRequest* request, const String& body) {
   sendJson(request, 200, resp);
 }
 
+// Central settings mutator. This endpoint is authoritative for runtime toggles.
 static void handleSettingsJson(AsyncWebServerRequest* request, const String& body) {
   JsonDocument doc;
   if (deserializeJson(doc, body) != DeserializationError::Ok) {
     sendError(request, 400, "invalid json");
     return;
+  }
+
+  if (canview_capture_active) {
+    if (doc.containsKey("disableController") && !(bool)doc["disableController"]) {
+      sendError(request, 409, "canview capture mode active");
+      return;
+    }
+    if (doc.containsKey("broadcastOpenHaldexOverCAN") && !(bool)doc["broadcastOpenHaldexOverCAN"]) {
+      sendError(request, 409, "canview capture mode active");
+      return;
+    }
   }
 
   bool dirty = false;
@@ -216,6 +242,55 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
   sendJson(request, 200, resp);
 }
 
+static void handleCanviewCaptureGet(AsyncWebServerRequest* request) {
+  JsonDocument doc;
+  doc["active"] = canview_capture_active;
+  doc["disableController"] = disableController;
+  doc["broadcastOpenHaldexOverCAN"] = broadcastOpenHaldexOverCAN;
+  sendJson(request, 200, doc);
+}
+
+// Capture mode enters a safe bridge state while user records diagnostics.
+static void handleCanviewCapturePost(AsyncWebServerRequest* request, const String& body) {
+  JsonDocument doc;
+  if (deserializeJson(doc, body) != DeserializationError::Ok) {
+    sendError(request, 400, "invalid json");
+    return;
+  }
+
+  bool want_active = doc["active"] | false;
+  bool changed = false;
+
+  if (want_active && !canview_capture_active) {
+    canview_capture_prev_disable_controller = disableController;
+    canview_capture_prev_broadcast = broadcastOpenHaldexOverCAN;
+    canview_capture_prev_valid = true;
+    canview_capture_active = true;
+    canviewCaptureApplySafeState();
+    changed = true;
+  } else if (!want_active && canview_capture_active) {
+    canview_capture_active = false;
+    if (canview_capture_prev_valid) {
+      disableController = canview_capture_prev_disable_controller;
+      state.mode = disableController ? MODE_STOCK : MODE_MAP;
+      broadcastOpenHaldexOverCAN = canview_capture_prev_broadcast;
+    }
+    canview_capture_prev_valid = false;
+    changed = true;
+  }
+
+  if (changed) {
+    storageMarkDirty();
+  }
+
+  JsonDocument resp;
+  resp["ok"] = true;
+  resp["active"] = canview_capture_active;
+  resp["disableController"] = disableController;
+  resp["broadcastOpenHaldexOverCAN"] = broadcastOpenHaldexOverCAN;
+  sendJson(request, 200, resp);
+}
+// Active in-memory map payload (what the controller is currently using).
 static void handleMapGet(AsyncWebServerRequest* request) {
   JsonDocument doc;
 
@@ -240,6 +315,7 @@ static void handleMapGet(AsyncWebServerRequest* request) {
   sendJson(request, 200, doc);
 }
 
+// Replace active in-memory map from UI/editor payload.
 static void handleMapPost(AsyncWebServerRequest* request, const String& body) {
   JsonDocument doc;
   if (deserializeJson(doc, body) != DeserializationError::Ok) {
@@ -378,6 +454,7 @@ static void handleWifiGet(AsyncWebServerRequest* request) {
   sendJson(request, 200, doc);
 }
 
+// Save hotspot credentials and STA enable policy, then re-apply Wi-Fi mode.
 static void handleWifiPost(AsyncWebServerRequest* request, const String& body) {
   JsonDocument doc;
   if (deserializeJson(doc, body) != DeserializationError::Ok) {
@@ -428,6 +505,7 @@ static void handleNetworkGet(AsyncWebServerRequest* request) {
   sendJson(request, 200, doc);
 }
 
+// OTA state snapshot used by OTA page polling.
 static void handleUpdateGet(AsyncWebServerRequest* request) {
   UpdateInfo info;
   updateGetInfo(info);
@@ -452,6 +530,7 @@ static void handleUpdateGet(AsyncWebServerRequest* request) {
   sendJson(request, 200, doc);
 }
 
+// Live CAN view endpoint (decoded + raw) with server-side limits and bus filter.
 static void handleCanview(AsyncWebServerRequest* request) {
   uint16_t decoded = 200;
   uint8_t raw = 20;
@@ -473,7 +552,7 @@ static void handleCanview(AsyncWebServerRequest* request) {
   request->send(200, "application/json", json);
 }
 
-
+// One-shot text dump used for support/debug captures.
 static void handleCanviewDump(AsyncWebServerRequest* request) {
   uint32_t seconds = 30;
   if (request->hasParam("seconds")) {
@@ -502,21 +581,13 @@ void setupApi(AsyncWebServer& server) {
   server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) { handleStatus(request); });
 
   server.on(
-    "/api/mode", HTTP_POST,
-    [](AsyncWebServerRequest* request) {
-      // response sent in body handler
-    },
-    nullptr,
+    "/api/mode", HTTP_POST, [](AsyncWebServerRequest* request) { (void)request; }, nullptr,
     [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
       onJsonBody(request, data, len, index, total, handleModeJson);
     });
 
   server.on(
-    "/api/settings", HTTP_POST,
-    [](AsyncWebServerRequest* request) {
-      // response sent in body handler
-    },
-    nullptr,
+    "/api/settings", HTTP_POST, [](AsyncWebServerRequest* request) { (void)request; }, nullptr,
     [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
       onJsonBody(request, data, len, index, total, handleSettingsJson);
     });
@@ -524,11 +595,7 @@ void setupApi(AsyncWebServer& server) {
   server.on("/api/map", HTTP_GET, [](AsyncWebServerRequest* request) { handleMapGet(request); });
 
   server.on(
-    "/api/map", HTTP_POST,
-    [](AsyncWebServerRequest* request) {
-      // response sent in body handler
-    },
-    nullptr,
+    "/api/map", HTTP_POST, [](AsyncWebServerRequest* request) { (void)request; }, nullptr,
     [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
       onJsonBody(request, data, len, index, total, handleMapPost);
     });
@@ -536,31 +603,19 @@ void setupApi(AsyncWebServer& server) {
   server.on("/api/maps", HTTP_GET, [](AsyncWebServerRequest* request) { handleMapsList(request); });
 
   server.on(
-    "/api/maps/load", HTTP_POST,
-    [](AsyncWebServerRequest* request) {
-      // response sent in body handler
-    },
-    nullptr,
+    "/api/maps/load", HTTP_POST, [](AsyncWebServerRequest* request) { (void)request; }, nullptr,
     [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
       onJsonBody(request, data, len, index, total, handleMapLoad);
     });
 
   server.on(
-    "/api/maps/save", HTTP_POST,
-    [](AsyncWebServerRequest* request) {
-      // response sent in body handler
-    },
-    nullptr,
+    "/api/maps/save", HTTP_POST, [](AsyncWebServerRequest* request) { (void)request; }, nullptr,
     [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
       onJsonBody(request, data, len, index, total, handleMapSave);
     });
 
   server.on(
-    "/api/maps/delete", HTTP_POST,
-    [](AsyncWebServerRequest* request) {
-      // response sent in body handler
-    },
-    nullptr,
+    "/api/maps/delete", HTTP_POST, [](AsyncWebServerRequest* request) { (void)request; }, nullptr,
     [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
       onJsonBody(request, data, len, index, total, handleMapDelete);
     });
@@ -568,11 +623,7 @@ void setupApi(AsyncWebServer& server) {
   server.on("/api/wifi", HTTP_GET, [](AsyncWebServerRequest* request) { handleWifiGet(request); });
 
   server.on(
-    "/api/wifi", HTTP_POST,
-    [](AsyncWebServerRequest* request) {
-      // response sent in body handler
-    },
-    nullptr,
+    "/api/wifi", HTTP_POST, [](AsyncWebServerRequest* request) { (void)request; }, nullptr,
     [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
       onJsonBody(request, data, len, index, total, handleWifiPost);
     });
@@ -595,7 +646,10 @@ void setupApi(AsyncWebServer& server) {
 
   server.on("/api/canview", HTTP_GET, [](AsyncWebServerRequest* request) { handleCanview(request); });
   server.on("/api/canview/dump", HTTP_GET, [](AsyncWebServerRequest* request) { handleCanviewDump(request); });
+  server.on("/api/canview/capture", HTTP_GET, [](AsyncWebServerRequest* request) { handleCanviewCaptureGet(request); });
+  server.on(
+    "/api/canview/capture", HTTP_POST, [](AsyncWebServerRequest* request) { (void)request; }, nullptr,
+    [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
+      onJsonBody(request, data, len, index, total, handleCanviewCapturePost);
+    });
 }
-
-
-
