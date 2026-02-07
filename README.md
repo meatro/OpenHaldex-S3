@@ -2,7 +2,7 @@
 
 ### A free, open-source Haldex controller built on ~$50 of off-the-shelf hardware
 
-**Lift seat ? plug in ? done.**  
+**Lift seat -> plug in -> done.**  
 No jacks. No harness. No permanent changes.
 
 OpenHaldex-S3 is a **map-driven AWD controller** for Gen 1, 2, and 4 Haldex-equipped VW and transverse Audi vehicles.
