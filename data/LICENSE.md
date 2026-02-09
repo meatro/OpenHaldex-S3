@@ -1,33 +1,67 @@
-OpenHaldex-S3 UI Attribution License
+OpenHaldex-S3 User Interface License
+-----------------------------------
 
 Copyright (c) 2026 SpringfieldVW.com
+Authored by Chris (OpenHaldex-S3)
 
-Permission is hereby granted, free of charge, to any person obtaining a copy
-of this user interface software and associated files (the "UI Software"),
-to use, copy, modify, and distribute the UI Software, subject to the
-following conditions:
+This license applies ONLY to the user interface assets contained within
+the `data/` directory of the OpenHaldex-S3 project, including but not
+limited to HTML, CSS, JavaScript, images, layout, styling, and user
+interaction design.
 
-1. This license applies only to the user interface code and assets located
-   in the /data directory of the OpenHaldex-S3 project.
+Firmware, control logic, and non-UI source code remain licensed under
+their respective licenses as documented elsewhere in the repository.
 
-2. Redistributions of the UI Software must retain this license text.
 
-3. Visible attribution to the original author (SpringfieldVW.com) must be
-   preserved in the user interface of any redistributed or publicly
-   accessible version of the UI Software. This includes, but is not limited
-   to, a footer, "About" section, or equivalent user-visible location.
+1. PERMITTED USE
 
-4. The UI Software may not be presented, marketed, or represented as the
-   original or proprietary user interface of a third-party hardware vendor
-   without explicit written permission from the copyright holder.
+Permission is granted to use, copy, and modify the UI code for personal,
+educational, and non-commercial purposes.
 
-5. Use of the UI Software does not imply endorsement by the original author
-   of any derivative works, hardware products, or commercial offerings.
+Derivative works are allowed, provided that all conditions below are met.
 
-THE UI SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
-IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
-FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL
-THE AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
-LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
-OUT OF OR IN CONNECTION WITH THE UI SOFTWARE OR THE USE OR OTHER DEALINGS
-IN THE UI SOFTWARE.
+
+2. REQUIRED ATTRIBUTION (UI-VISIBLE)
+
+Any use, redistribution, or modification of this UI MUST retain visible,
+user-facing attribution that clearly states:
+
+    "OpenHaldex-S3 UI by SpringfieldVW.com"
+
+This attribution must appear within the user interface itself and must
+remain reasonably visible during normal operation.
+
+Removal, obscuring, or replacement of this attribution is prohibited.
+
+
+3. NO REBRANDING OR MISREPRESENTATION
+
+This UI, or any derivative of it, may not be presented in a way that:
+
+- Implies authorship by another individual or company
+- Implies endorsement by SpringfieldVW.com or the OpenHaldex-S3 project
+- Is marketed or branded as a proprietary product of a third party
+
+Use of this UI in commercial products, hardware, or paid software
+offerings requires explicit prior written permission from the copyright
+holder.
+
+
+4. COMMERCIAL USE
+
+Commercial redistribution, resale, or inclusion in a paid product
+(including bundled hardware or firmware sold for profit) is NOT permitted
+without explicit written permission from SpringfieldVW.com.
+
+
+5. NO WARRANTY
+
+This UI is provided "AS IS", without warranty of any kind, express or
+implied. The author shall not be liable for any damages arising from its
+use.
+
+
+6. SEVERABILITY
+
+If any provision of this license is held unenforceable, the remaining
+provisions shall remain in effect.

@@ -161,11 +161,16 @@ installation, live tuning, and additional telemetry.
 
 ---
 
-## Licensing
+## UI Licensing Notice
 
-Firmware and controller logic are licensed under the MIT License.
-The web UI located in `/data` is licensed separately and requires visible
-attribution to SpringfieldVW.com in any redistributed version.
+The web-based user interface located in the `data/` directory is licensed
+separately from the rest of the OpenHaldex-S3 project.
+
+While core firmware and control logic are released under the MIT License,
+the UI is subject to additional terms requiring visible attribution and
+restricting commercial redistribution.
+
+See `data/UI-LICENSE.txt` for details.
 
 ---
 
