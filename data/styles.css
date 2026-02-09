@@ -1,3 +1,7 @@
+/* OpenHaldex-S3 UI
+   © 2026 SpringfieldVW.com
+   Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE) */
+
 :root {
   --bg: #f7f8fa;
   --bg-accent: #f3f4f6;
@@ -7,15 +11,15 @@
   --muted: #6b7280;
   --line: #e6e8ed;
   --hover: #fafbfc;
-  --brand: #bb0a30;
-  --brand-600: #a1082b;
-  --brand-200: #ffd9e0;
-  --ring: 0 0 0 3px rgba(187, 10, 48, 0.22);
+  --brand: #0051ce;
+  --brand-600: #0038a8;
+  --brand-200: #d6e4ff;
+  --ring: 0 0 0 3px rgba(0, 81, 206, 0.22);
   --shadow: 0 10px 30px rgba(10, 15, 30, 0.06);
   --shadow-strong: 0 20px 44px rgba(10, 15, 30, 0.1);
   --header-grad:
     linear-gradient(135deg, #fff 0%, #fff 40%, #fff0 41%),
-    linear-gradient(135deg, #ffe9ee 0%, #fff 50%, #ffe3ea 100%);
+    linear-gradient(135deg, #e8f0ff 0%, #fff 50%, #dde8ff 100%);
   --toggle-dot: #9aa3ad;
   --page-pad: 24px;
 }
@@ -297,6 +301,37 @@ button:active {
 }
 .mapBinsRow {
   align-items: flex-start;
+}
+.mapShapeRow {
+  align-items: flex-end;
+}
+.shapeMeta {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  white-space: nowrap;
+}
+.shapeMeta .sub {
+  margin: 0;
+}
+.mapRange {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--muted);
+}
+.mapRange input[type="range"] {
+  width: 140px;
+  accent-color: var(--brand);
+}
+.map-col-header {
+  cursor: pointer;
+}
+.map-col-header.active {
+  background: var(--brand-200);
+  color: var(--text);
+  box-shadow: inset 0 -2px 0 var(--brand);
 }
 .fileRow {
   display: inline-flex;

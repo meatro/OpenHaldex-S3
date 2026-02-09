@@ -1,3 +1,7 @@
+// OpenHaldex-S3 UI
+// © 2026 SpringfieldVW.com
+// Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
+
 function initTheme() {
   const stored = localStorage.getItem("ohTheme");
   const prefersDark =
@@ -231,9 +235,42 @@ function initMapPage() {
   const throttleBinsEl = document.getElementById("throttleBins");
   const tableEl = document.getElementById("mapTable");
   const mapSelect = document.getElementById("mapSelect");
+  const shapeColLabel = document.getElementById("shapeColLabel");
+  const shapeStart = document.getElementById("shapeStart");
+  const shapeEnd = document.getElementById("shapeEnd");
+  const shapeStartVal = document.getElementById("shapeStartVal");
+  const shapeEndVal = document.getElementById("shapeEndVal");
+  const btnApplyShape = document.getElementById("btnApplyShape");
+
+  let headerCells = [];
+  let selectedCol = null;
 
   function setStatus(msg) {
     statusEl.textContent = msg || "";
+  }
+
+  function updateShapeLabels() {
+    if (shapeStartVal && shapeStart) shapeStartVal.textContent = shapeStart.value;
+    if (shapeEndVal && shapeEnd) shapeEndVal.textContent = shapeEnd.value;
+  }
+
+  function updateCellValue(r, c, value) {
+    const cell = (cellInputs[r] || [])[c];
+    if (!cell) return;
+    const input = cell.querySelector("input");
+    if (!input) return;
+    input.value = value;
+    applyCellColor(input, value);
+  }
+
+  function setSelectedColumn(index) {
+    selectedCol = Number.isInteger(index) ? index : null;
+    headerCells.forEach((cell, i) => {
+      cell.classList.toggle("active", selectedCol === i);
+    });
+    if (shapeColLabel) {
+      shapeColLabel.textContent = selectedCol === null ? "None" : "S" + state.speed[selectedCol];
+    }
   }
 
   function applyCellColor(input, value) {
@@ -275,7 +312,14 @@ function initMapPage() {
     const thead = document.createElement("thead");
     const hrow = document.createElement("tr");
     hrow.appendChild(th("Throttle"));
-    state.speed.forEach((s) => hrow.appendChild(th("S" + s)));
+    headerCells = [];
+    state.speed.forEach((s, c) => {
+      const header = th("S" + s);
+      header.classList.add("map-col-header");
+      header.addEventListener("click", () => setSelectedColumn(c));
+      headerCells.push(header);
+      hrow.appendChild(header);
+    });
     thead.appendChild(hrow);
     tableEl.appendChild(thead);
 
@@ -305,6 +349,31 @@ function initMapPage() {
       tbody.appendChild(row);
     });
     tableEl.appendChild(tbody);
+    if (selectedCol !== null && selectedCol < headerCells.length) {
+      setSelectedColumn(selectedCol);
+    } else {
+      setSelectedColumn(null);
+    }
+  }
+
+  function applyColumnShape(options = {}) {
+    if (selectedCol === null) {
+      if (!options.silent) setStatus("Select a column header to shape");
+      return;
+    }
+    const start = parseInt(shapeStart ? shapeStart.value : "0", 10);
+    const end = parseInt(shapeEnd ? shapeEnd.value : "0", 10);
+    const rows = state.throttle.length;
+    for (let r = 0; r < rows; r++) {
+      const t = rows > 1 ? r / (rows - 1) : 0;
+      const raw = start + (end - start) * t;
+      const value = Math.max(0, Math.min(100, Math.round(raw)));
+      state.lock[r][selectedCol] = value;
+      updateCellValue(r, selectedCol, value);
+    }
+    if (!options.silent) {
+      setStatus(`Shaped column S${state.speed[selectedCol]} (${start} -> ${end})`);
+    }
   }
 
   function th(text) {
@@ -506,6 +575,19 @@ function initMapPage() {
   document.getElementById("btnSaveMap").onclick = saveMapAs;
   document.getElementById("btnDeleteMap").onclick = deleteSelectedMap;
   document.getElementById("btnDownload").onclick = exportTxt;
+  if (shapeStart) {
+    shapeStart.addEventListener("input", () => {
+      updateShapeLabels();
+      applyColumnShape({ silent: true });
+    });
+  }
+  if (shapeEnd) {
+    shapeEnd.addEventListener("input", () => {
+      updateShapeLabels();
+      applyColumnShape({ silent: true });
+    });
+  }
+  if (btnApplyShape) btnApplyShape.onclick = () => applyColumnShape({ silent: false });
   document.getElementById("fileInput").onchange = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -523,6 +605,7 @@ function initMapPage() {
   refreshMapList("");
   loadFromDevice();
   setInterval(refreshTrace, 250);
+  updateShapeLabels();
 }
 
 // CAN view controller:

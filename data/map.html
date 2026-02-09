@@ -1,3 +1,8 @@
+<!--
+OpenHaldex-S3 UI
+© 2026 SpringfieldVW.com
+Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
+-->
 <!doctype html>
 <html lang="en">
   <head>
@@ -80,6 +85,27 @@
               <div class="sub">Throttle bins</div>
               <div class="bins" id="throttleBins"></div>
             </div>
+          </div>
+        </details>
+
+        <details class="mapAdvanced">
+          <summary>Column Shaping</summary>
+          <div class="row mapRow mapShapeRow">
+            <div class="shapeMeta">
+              <span class="sub">Selected column</span>
+              <span id="shapeColLabel" class="pill">None</span>
+            </div>
+            <label class="mapRange"
+              >Start
+              <input id="shapeStart" type="range" min="0" max="100" value="0" />
+              <span id="shapeStartVal" class="pill">0</span>
+            </label>
+            <label class="mapRange"
+              >End
+              <input id="shapeEnd" type="range" min="0" max="100" value="100" />
+              <span id="shapeEndVal" class="pill">100</span>
+            </label>
+            <button id="btnApplyShape">Apply to column</button>
           </div>
         </details>
 

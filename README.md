@@ -161,6 +161,14 @@ installation, live tuning, and additional telemetry.
 
 ---
 
+## Licensing
+
+Firmware and controller logic are licensed under the MIT License.
+The web UI located in `/data` is licensed separately and requires visible
+attribution to SpringfieldVW.com in any redistributed version.
+
+---
+
 ## Technical Changelog (Rolling)
 
 This section tracks engineering-level changes made during the S3 port and stabilization work.
@@ -168,6 +176,7 @@ This section tracks engineering-level changes made during the S3 port and stabil
 ### Platform + Build System
 
 - Migrated and pinned the project to PlatformIO with explicit ESP32 package versions for reproducible builds.
+- Note: validated with VS Code 1.109 and PlatformIO 3.3.4
 - Targeted board profile moved to `esp32-s3-devkitc1-n16r8` with explicit 16 MB flash configuration.
 - Locked custom partitions + LittleFS in `platformio.ini`:
   - `board_build.flash_size = 16MB`
@@ -253,6 +262,7 @@ This section tracks engineering-level changes made during the S3 port and stabil
   - speed/throttle gauges (responsive sizing)
   - engagement bar
 - Added map live-trace improvements and active-cell visibility tuning.
+- Added column shaping controls in the map editor for gradient edits across a selected speed bin.
 - Added UX consistency updates for controller toggle semantics and diagnostics naming.
 
 ### Networking (AP/STA + mDNS)
