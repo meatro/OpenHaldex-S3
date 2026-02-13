@@ -1,5 +1,7 @@
 # OpenHaldex-S3
 
+![OpenHaldex Screenshot](https://openhaldex.dev/images/Screenshot_20260212-210513.jpg)
+
 ### A free, open-source Haldex controller built on ~$50 of off-the-shelf hardware
 
 **Lift seat -> plug in -> done.**  
