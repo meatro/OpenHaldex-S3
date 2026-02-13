@@ -183,9 +183,8 @@ static void handleStatus(AsyncWebServerRequest* request) {
   doc["uptimeMs"] = millis();
 
   JsonObject logging = doc["logging"].to<JsonObject>();
-  logging["masterEnabled"] =
-    logToFileEnabled || logSerialEnabled || logCanToFileEnabled || logErrorToFileEnabled || logDebugFirmwareEnabled ||
-    logDebugNetworkEnabled || logDebugCanEnabled;
+  logging["masterEnabled"] = logToFileEnabled || logSerialEnabled || logCanToFileEnabled || logErrorToFileEnabled ||
+                             logDebugFirmwareEnabled || logDebugNetworkEnabled || logDebugCanEnabled;
   logging["enabled"] = logToFileEnabled;
   logging["canEnabled"] = logCanToFileEnabled;
   logging["errorEnabled"] = logErrorToFileEnabled;
@@ -1059,8 +1058,8 @@ static void handleSpeedCurvePost(AsyncWebServerRequest* request, const String& b
     int x = points[i]["x"] | -1;
     int lock = points[i]["lock"] | -1;
     if (x < 0 || x > 300 || lock < 0 || lock > 100) {
-      filelogLogError("curve/speed", String("point out of range idx=") + String(i) + " x=" + String(x) +
-                                        " lock=" + String(lock));
+      filelogLogError("curve/speed",
+                      String("point out of range idx=") + String(i) + " x=" + String(x) + " lock=" + String(lock));
       sendError(request, 400, "point out of range");
       return;
     }
@@ -1124,8 +1123,8 @@ static void handleThrottleCurvePost(AsyncWebServerRequest* request, const String
     int x = points[i]["x"] | -1;
     int lock = points[i]["lock"] | -1;
     if (x < 0 || x > 100 || lock < 0 || lock > 100) {
-      filelogLogError("curve/throttle", String("point out of range idx=") + String(i) + " x=" + String(x) +
-                                           " lock=" + String(lock));
+      filelogLogError("curve/throttle",
+                      String("point out of range idx=") + String(i) + " x=" + String(x) + " lock=" + String(lock));
       sendError(request, 400, "point out of range");
       return;
     }
@@ -1189,8 +1188,8 @@ static void handleRpmCurvePost(AsyncWebServerRequest* request, const String& bod
     int x = points[i]["x"] | -1;
     int lock = points[i]["lock"] | -1;
     if (x < 0 || x > 10000 || lock < 0 || lock > 100) {
-      filelogLogError("curve/rpm", String("point out of range idx=") + String(i) + " x=" + String(x) +
-                                      " lock=" + String(lock));
+      filelogLogError("curve/rpm",
+                      String("point out of range idx=") + String(i) + " x=" + String(x) + " lock=" + String(lock));
       sendError(request, 400, "point out of range");
       return;
     }

@@ -18,7 +18,7 @@ enum openhaldex_mode_t {
   MODE_RPM,
   openhaldex_mode_t_MAX,
   MODE_CUSTOM = MODE_SPEED, // legacy alias
-  MODE_7525 = MODE_7030 // legacy alias
+  MODE_7525 = MODE_7030     // legacy alias
 };
 
 struct lockpoint_t {

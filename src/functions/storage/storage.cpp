@@ -422,7 +422,8 @@ void storageLoad() {
     disableSpeed = pref.getUShort("disableSpeed", disableSpeed);
     disengageUnderSpeedMap = pref.getUShort(DISENGAGE_MAP_SPEED_KEY, disengageUnderSpeedMap);
     disengageUnderSpeedSpeedMode = pref.getUShort(DISENGAGE_SPEED_MODE_SPEED_KEY, disengageUnderSpeedSpeedMode);
-    disengageUnderSpeedThrottleMode = pref.getUShort(DISENGAGE_THROTTLE_MODE_SPEED_KEY, disengageUnderSpeedThrottleMode);
+    disengageUnderSpeedThrottleMode =
+      pref.getUShort(DISENGAGE_THROTTLE_MODE_SPEED_KEY, disengageUnderSpeedThrottleMode);
     disengageUnderSpeedRpmMode = pref.getUShort(DISENGAGE_RPM_MODE_SPEED_KEY, disengageUnderSpeedRpmMode);
     lockReleaseRatePctPerSec = pref.getFloat(LOCK_RELEASE_RATE_KEY, lockReleaseRatePctPerSec);
     if (disengageUnderSpeedMap > 300) {
@@ -460,7 +461,6 @@ void storageLoad() {
       pref.putBool(LOG_ERROR_ENABLE_KEY, true);
       LOG_WARN("storage", "forcing logErrorToFileEnabled=1 while debug capture is active");
     }
-
 
     speed_curve_count = pref.getUChar(SPEED_CURVE_COUNT_KEY, speed_curve_count);
     throttle_curve_count = pref.getUChar(THROTTLE_CURVE_COUNT_KEY, throttle_curve_count);

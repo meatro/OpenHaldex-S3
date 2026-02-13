@@ -151,7 +151,8 @@ static bool frame_mux_matches(const dbc_signal_t* signal, const twai_message_t& 
   if (!mux_sig) {
     return false;
   }
-  const uint64_t raw = vw_pq_dbc_extract_raw(frame.data, mux_sig->start_bit, mux_sig->length, mux_sig->is_little_endian);
+  const uint64_t raw =
+    vw_pq_dbc_extract_raw(frame.data, mux_sig->start_bit, mux_sig->length, mux_sig->is_little_endian);
   return ((int)raw) == signal->mux;
 }
 
@@ -205,8 +206,8 @@ static void refresh_binding(mapped_signal_binding_t& binding, const String& sour
   binding.ready = binding.signal != nullptr;
 }
 
-static bool apply_binding_from_frame(const mapped_signal_binding_t& binding, const twai_message_t& frame, uint8_t bus_index,
-                                     float& out_value) {
+static bool apply_binding_from_frame(const mapped_signal_binding_t& binding, const twai_message_t& frame,
+                                     uint8_t bus_index, float& out_value) {
   if (!binding.ready || !binding.signal) {
     return false;
   }
@@ -284,8 +285,8 @@ void parseCAN_chs(void* arg) {
         mapped_speed_tick_ms = now_ms;
       }
 
-      const bool speed_mapped_recent = (mapped_speed_source.length() > 0) &&
-                                       ((now_ms - (uint32_t)mapped_speed_tick_ms) <= k_mapped_input_timeout_ms);
+      const bool speed_mapped_recent =
+        (mapped_speed_source.length() > 0) && ((now_ms - (uint32_t)mapped_speed_tick_ms) <= k_mapped_input_timeout_ms);
       const bool throttle_mapped_recent = (mapped_throttle_source.length() > 0) &&
                                           ((now_ms - (uint32_t)mapped_throttle_tick_ms) <= k_mapped_input_timeout_ms);
       const bool rpm_mapped_recent =

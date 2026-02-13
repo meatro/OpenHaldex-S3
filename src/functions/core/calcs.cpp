@@ -102,8 +102,7 @@ static float get_throttle_lock_target() {
     throttle_bins_u16[i] = throttle_curve_bins[i];
   }
 
-  float lock =
-    interpolate_curve_u16((uint16_t)throttle, throttle_bins_u16, throttle_curve_lock, throttle_curve_count);
+  float lock = interpolate_curve_u16((uint16_t)throttle, throttle_bins_u16, throttle_curve_lock, throttle_curve_count);
   if (lock < 0.0f)
     lock = 0.0f;
   if (lock > 100.0f)

@@ -222,7 +222,7 @@ This section tracks engineering-level changes made during the S3 port and stabil
 
 ### CAN Stack + Bus Roles
 
-- Implemented dual-bus handling for LilyGo T-2CAN-S3:
+- Implemented dual-bus handling for LilyGo T-2CAN-ESP32-S3:
   - Chassis bus via ESP32-S3 internal TWAI
   - Haldex bus via MCP2515 (SPI)
 - Added compile-time bus role flag in pin config (`OH_CAN_HALDEX_MCP2515`) and mapped send/receive paths to keep logical `chassis_*` and `haldex_*` interfaces stable.

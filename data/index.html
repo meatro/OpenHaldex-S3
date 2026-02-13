@@ -5,208 +5,305 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 -->
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OpenHaldex-S3</title>
-  <link rel="stylesheet" href="./styles.css" />
-</head>
-<body data-theme="dark">
-  <div class="container">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenHaldex-S3</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-theme="dark">
+    <div class="container">
+      <!-- Slide Menu Overlay -->
+      <nav id="main-menu" class="slide-menu" aria-label="Main menu" aria-hidden="true">
+        <div class="menu-header">
+          <button type="button" class="menu-close" aria-label="Close menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+          <div class="menu-brand">
+            <div class="brand-logo">OH</div>
+            <div class="brand-text">
+              <span class="brand-title">OpenHaldex-S3</span>
+              <span class="brand-subtitle">by springfieldvw.com</span>
+            </div>
+          </div>
+        </div>
+        <ul class="menu-items">
+          <li><a href="./index.html">Home</a></li>
+          <li><a href="./map.html">Map</a></li>
+          <li><a href="./speed.html">Speed Settings</a></li>
+          <li><a href="./throttle.html">Throttle Settings</a></li>
+          <li><a href="./rpm.html">RPM Settings</a></li>
+          <li><a href="./canview.html">CAN View</a></li>
+          <li><a href="./diag.html">Diagnostics</a></li>
+          <li><a href="./logs.html">Logs</a></li>
+          <li><a href="./setup.html">Setup</a></li>
+          <li><a href="./ota.html">OTA</a></li>
+          <li><a href="./help.html">Help</a></li>
+          <li><a href="./about.html">About</a></li>
+        </ul>
+      </nav>
 
-    <!-- Slide Menu Overlay -->
-    <nav id="main-menu" class="slide-menu" aria-label="Main menu" aria-hidden="true">
-      <div class="menu-header">
-        <button type="button" class="menu-close" aria-label="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
+      <div class="menu-backdrop" hidden></div>
+
+      <!-- App Header -->
+      <header class="header">
+        <button
+          type="button"
+          class="header-btn menu-toggle"
+          aria-label="Open menu"
+          aria-controls="main-menu"
+          aria-expanded="false"
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" />
           </svg>
         </button>
-        <div class="menu-brand">
+        <div class="header-brand">
           <div class="brand-logo">OH</div>
           <div class="brand-text">
             <span class="brand-title">OpenHaldex-S3</span>
             <span class="brand-subtitle">by springfieldvw.com</span>
           </div>
         </div>
-      </div>
-      <ul class="menu-items">
-        <li><a href="./index.html">Home</a></li>
-        <li><a href="./map.html">Map</a></li>
-        <li><a href="./speed.html">Speed Settings</a></li>
-        <li><a href="./throttle.html">Throttle Settings</a></li>
-        <li><a href="./rpm.html">RPM Settings</a></li>
-        <li><a href="./canview.html">CAN View</a></li>
-        <li><a href="./diag.html">Diagnostics</a></li>
-        <li><a href="./logs.html">Logs</a></li>
-        <li><a href="./setup.html">Setup</a></li>
-        <li><a href="./ota.html">OTA</a></li>
-        <li><a href="./help.html">Help</a></li>
-        <li><a href="./about.html">About</a></li>
-      </ul>
-    </nav>
-
-    <div class="menu-backdrop" hidden></div>
-
-    <!-- App Header -->
-    <header class="header">
-      <button type="button" class="header-btn menu-toggle" aria-label="Open menu" aria-controls="main-menu" aria-expanded="false">
-        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2"/></svg>
-      </button>
-      <div class="header-brand">
-        <div class="brand-logo">OH</div>
-        <div class="brand-text">
-          <span class="brand-title">OpenHaldex-S3</span>
-          <span class="brand-subtitle">by springfieldvw.com</span>
-        </div>
-      </div>
-      <div class="header-icons">
-        <button type="button" class="header-btn fullscreen-toggle" aria-label="Enter fullscreen">
-          <svg class="fullscreen-icon expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-          </svg>
-          <svg class="fullscreen-icon compress-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
-          </svg>
-        </button>
-        <button type="button" class="header-btn theme-toggle" aria-label="Switch theme">
-          <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5"/>
-            <line x1="12" y1="1" x2="12" y2="3"/>
-            <line x1="12" y1="21" x2="12" y2="23"/>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-            <line x1="1" y1="12" x2="3" y2="12"/>
-            <line x1="21" y1="12" x2="23" y2="12"/>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-          </svg>
-          <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-        </button>
-        <div class="header-btn wifi-icon" role="status" aria-label="Wi-Fi connected">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
-            <path d="M8.5 16.5a6 6 0 0 1 7 0"/>
-            <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/>
-          </svg>
-        </div>
-      </div>
-    </header>
-
-    <!-- Button Area Container -->
-    <div class="grid-container">
-      <div class="col-4">
-        <button type="button" class="btn-circle active" data-mode="lock" aria-label="Mode Lock" aria-pressed="true">
-          <div class="btn-icon">Lock</div>
-        </button>
-      </div>
-      <div class="col-4">
-        <button type="button" class="btn-circle" data-mode="throttle" aria-label="Mode Throttle" aria-pressed="false">
-          <div class="btn-icon">Throttle</div>
-        </button>
-      </div>
-      <div class="col-4">
-        <button type="button" class="btn-circle" data-mode="speed" aria-label="Mode Speed" aria-pressed="false">
-          <div class="btn-icon">Speed</div>
-        </button>
-      </div>
-      <div class="col-4">
-        <button type="button" class="btn-circle" data-mode="map" aria-label="Mode Map" aria-pressed="false">
-          <div class="btn-icon">Map</div>
-        </button>
-      </div>
-      <div class="col-4">
-        <button type="button" class="btn-circle" data-mode="off" aria-label="Mode Off" aria-pressed="false">
-          <div class="btn-icon">Off</div>
-        </button>
-      </div>
-      <div class="col-4">
-        <button type="button" class="btn-circle" data-mode="rpm" aria-label="Mode RPM" aria-pressed="false">
-          <div class="btn-icon">RPM</div>
-        </button>
-      </div>
-    </div>
-
-    <!-- Display Area Container -->
-    <div class="grid-container">
-      <div class="col-12 display-section">
-        <div class="ratio-display">
-          <div class="ratio-value">
-            <div class="ratio-number" data-position="front">50</div>
-            <div class="ratio-label">FRONT</div>
-          </div>
-          <div class="ratio-separator">:</div>
-          <div class="ratio-value">
-            <div class="ratio-number" data-position="rear">50</div>
-            <div class="ratio-label">REAR</div>
+        <div class="header-icons">
+          <button type="button" class="header-btn fullscreen-toggle" aria-label="Enter fullscreen">
+            <svg
+              class="fullscreen-icon expand-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
+              />
+            </svg>
+            <svg
+              class="fullscreen-icon compress-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"
+              />
+            </svg>
+          </button>
+          <button type="button" class="header-btn theme-toggle" aria-label="Switch theme">
+            <svg
+              class="theme-icon sun-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
+            <svg
+              class="theme-icon moon-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          </button>
+          <div class="header-btn wifi-icon" role="status" aria-label="Wi-Fi connected">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+              <path d="M8.5 16.5a6 6 0 0 1 7 0" />
+              <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none" />
+            </svg>
           </div>
         </div>
-        <div class="ratio-line-container">
-          <div class="ratio-line"></div>
-          <input type="range" class="ratio-slider slider-enabled" min="0" max="50" value="50" step="10" aria-label="Rear torque bias" />
+      </header>
+
+      <!-- Button Area Container -->
+      <div class="grid-container">
+        <div class="col-4">
+          <button
+            type="button"
+            class="btn-circle active"
+            data-mode="lock"
+            aria-label="Mode Lock"
+            aria-pressed="true"
+          >
+            <div class="btn-icon">Lock</div>
+          </button>
         </div>
-        <div class="status-icons">
-          <div class="status-icon warning">
-            <svg viewBox="0 0 24 24"><path d="M12 4l8 14H4L12 4z" fill="none" stroke="currentColor" stroke-width="2"/></svg>
+        <div class="col-4">
+          <button
+            type="button"
+            class="btn-circle"
+            data-mode="throttle"
+            aria-label="Mode Throttle"
+            aria-pressed="false"
+          >
+            <div class="btn-icon">Throttle</div>
+          </button>
+        </div>
+        <div class="col-4">
+          <button
+            type="button"
+            class="btn-circle"
+            data-mode="speed"
+            aria-label="Mode Speed"
+            aria-pressed="false"
+          >
+            <div class="btn-icon">Speed</div>
+          </button>
+        </div>
+        <div class="col-4">
+          <button
+            type="button"
+            class="btn-circle"
+            data-mode="map"
+            aria-label="Mode Map"
+            aria-pressed="false"
+          >
+            <div class="btn-icon">Map</div>
+          </button>
+        </div>
+        <div class="col-4">
+          <button
+            type="button"
+            class="btn-circle"
+            data-mode="off"
+            aria-label="Mode Off"
+            aria-pressed="false"
+          >
+            <div class="btn-icon">Off</div>
+          </button>
+        </div>
+        <div class="col-4">
+          <button
+            type="button"
+            class="btn-circle"
+            data-mode="rpm"
+            aria-label="Mode RPM"
+            aria-pressed="false"
+          >
+            <div class="btn-icon">RPM</div>
+          </button>
+        </div>
+      </div>
+
+      <!-- Display Area Container -->
+      <div class="grid-container">
+        <div class="col-12 display-section">
+          <div class="ratio-display">
+            <div class="ratio-value">
+              <div class="ratio-number" data-position="front">50</div>
+              <div class="ratio-label">FRONT</div>
+            </div>
+            <div class="ratio-separator">:</div>
+            <div class="ratio-value">
+              <div class="ratio-number" data-position="rear">50</div>
+              <div class="ratio-label">REAR</div>
+            </div>
           </div>
-          <div class="status-icon brake">B</div>
-          <div class="status-icon park">P</div>
+          <div class="ratio-line-container">
+            <div class="ratio-line"></div>
+            <input
+              type="range"
+              class="ratio-slider slider-enabled"
+              min="0"
+              max="50"
+              value="50"
+              step="10"
+              aria-label="Rear torque bias"
+            />
+          </div>
+          <div class="status-icons">
+            <div class="status-icon warning">
+              <svg viewBox="0 0 24 24">
+                <path d="M12 4l8 14H4L12 4z" fill="none" stroke="currentColor" stroke-width="2" />
+              </svg>
+            </div>
+            <div class="status-icon brake">B</div>
+            <div class="status-icon park">P</div>
+          </div>
         </div>
       </div>
+
+      <!-- Data Area Container -->
+      <div class="grid-container">
+        <div class="col-3">
+          <div class="data-item">
+            <span class="data-label">Speed</span><span class="data-value">0 km/h</span>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="data-item">
+            <span class="data-label">Engine speed</span><span class="data-value">0 rpm</span>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="data-item">
+            <span class="data-label">Boost</span><span class="data-value">0.0 kPa</span>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="data-item">
+            <span class="data-label">Throttle</span><span class="data-value">0</span>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="data-item">
+            <span class="data-label">Mode</span><span class="data-value">Lock</span>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="data-item">
+            <span class="data-label">Haldex temp</span><span class="data-value">0 C</span>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="data-item">
+            <span class="data-label">Coolant</span><span class="data-value">0 C</span>
+          </div>
+        </div>
+        <div class="col-3">
+          <div class="data-item">
+            <span class="data-label">Setting</span><span class="data-value">50 / 50</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Footer -->
+      <footer class="footer">
+        <div>OpenHaldex-S3 ï¿½ SpringfieldVW.com</div>
+        <div class="version">
+          v0.6.0
+          <span class="update-available">
+            <svg viewBox="0 0 16 16">
+              <circle cx="8" cy="8" r="7" fill="currentColor" />
+              <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="white" stroke-width="1.5" />
+            </svg>
+            new version available
+          </span>
+        </div>
+      </footer>
     </div>
-
-    <!-- Data Area Container -->
-    <div class="grid-container">
-      <div class="col-3">
-        <div class="data-item"><span class="data-label">Speed</span><span class="data-value">0 km/h</span></div>
-      </div>
-      <div class="col-3">
-        <div class="data-item"><span class="data-label">Engine speed</span><span class="data-value">0 rpm</span></div>
-      </div>
-      <div class="col-3">
-        <div class="data-item"><span class="data-label">Boost</span><span class="data-value">0.0 kPa</span></div>
-      </div>
-      <div class="col-3">
-        <div class="data-item"><span class="data-label">Throttle</span><span class="data-value">0</span></div>
-      </div>
-      <div class="col-3">
-        <div class="data-item"><span class="data-label">Mode</span><span class="data-value">Lock</span></div>
-      </div>
-      <div class="col-3">
-        <div class="data-item"><span class="data-label">Haldex temp</span><span class="data-value">0 C</span></div>
-      </div>
-      <div class="col-3">
-        <div class="data-item"><span class="data-label">Coolant</span><span class="data-value">0 C</span></div>
-      </div>
-      <div class="col-3">
-        <div class="data-item"><span class="data-label">Setting</span><span class="data-value">50 / 50</span></div>
-      </div>
-    </div>
-
-    <!-- Footer -->
-    <footer class="footer">
-      <div>OpenHaldex-S3 ï¿½ SpringfieldVW.com</div>
-      <div class="version">
-        v0.6.0
-        <span class="update-available">
-          <svg viewBox="0 0 16 16">
-            <circle cx="8" cy="8" r="7" fill="currentColor"/>
-            <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="white" stroke-width="1.5"/>
-          </svg>
-          new version available
-        </span>
-      </div>
-    </footer>
-
-  </div>
-  <script src="./app.js"></script>
-</body>
+    <script src="./app.js"></script>
+  </body>
 </html>
-
-
-
-
-

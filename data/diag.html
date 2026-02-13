@@ -5,132 +5,330 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 -->
 <!doctype html>
 <html lang="en">
-<head>
-  <meta charset="utf-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OpenHaldex-S3 | Diagnostics</title>
-  <link rel="stylesheet" href="./styles.css" />
-</head>
-<body data-theme="dark" data-page="diag">
-  <div class="container">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>OpenHaldex-S3 | Diagnostics</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body data-theme="dark" data-page="diag">
+    <div class="container">
+      <!-- Slide Menu Overlay -->
+      <nav id="main-menu" class="slide-menu" aria-label="Main menu" aria-hidden="true">
+        <div class="menu-header">
+          <button type="button" class="menu-close" aria-label="Close menu">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          </button>
+          <div class="menu-brand">
+            <div class="brand-logo">OH</div>
+            <div class="brand-text">
+              <span class="brand-title">OpenHaldex-S3</span>
+              <span class="brand-subtitle">by springfieldvw.com</span>
+            </div>
+          </div>
+        </div>
+        <ul class="menu-items">
+          <li><a href="./index.html">Home</a></li>
+          <li><a href="./map.html">Map</a></li>
+          <li><a href="./speed.html">Speed Settings</a></li>
+          <li><a href="./throttle.html">Throttle Settings</a></li>
+          <li><a href="./rpm.html">RPM Settings</a></li>
+          <li><a href="./canview.html">CAN View</a></li>
+          <li><a href="./diag.html">Diagnostics</a></li>
+          <li><a href="./logs.html">Logs</a></li>
+          <li><a href="./setup.html">Setup</a></li>
+          <li><a href="./ota.html">OTA</a></li>
+          <li><a href="./help.html">Help</a></li>
+          <li><a href="./about.html">About</a></li>
+        </ul>
+      </nav>
 
-    <!-- Slide Menu Overlay -->
-    <nav id="main-menu" class="slide-menu" aria-label="Main menu" aria-hidden="true">
-      <div class="menu-header">
-        <button type="button" class="menu-close" aria-label="Close menu">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <line x1="18" y1="6" x2="6" y2="18"/>
-            <line x1="6" y1="6" x2="18" y2="18"/>
+      <div class="menu-backdrop" hidden></div>
+
+      <!-- App Header -->
+      <header class="header">
+        <button
+          type="button"
+          class="header-btn menu-toggle"
+          aria-label="Open menu"
+          aria-controls="main-menu"
+          aria-expanded="false"
+        >
+          <svg viewBox="0 0 24 24">
+            <path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" />
           </svg>
         </button>
-        <div class="menu-brand">
+        <div class="header-brand">
           <div class="brand-logo">OH</div>
           <div class="brand-text">
             <span class="brand-title">OpenHaldex-S3</span>
             <span class="brand-subtitle">by springfieldvw.com</span>
           </div>
         </div>
-      </div>
-      <ul class="menu-items">
-        <li><a href="./index.html">Home</a></li>
-        <li><a href="./map.html">Map</a></li>
-        <li><a href="./speed.html">Speed Settings</a></li>
-        <li><a href="./throttle.html">Throttle Settings</a></li>
-        <li><a href="./rpm.html">RPM Settings</a></li>
-        <li><a href="./canview.html">CAN View</a></li>
-        <li><a href="./diag.html">Diagnostics</a></li>
-        <li><a href="./logs.html">Logs</a></li>
-        <li><a href="./setup.html">Setup</a></li>
-        <li><a href="./ota.html">OTA</a></li>
-        <li><a href="./help.html">Help</a></li>
-        <li><a href="./about.html">About</a></li>
-      </ul>
-    </nav>
-
-    <div class="menu-backdrop" hidden></div>
-
-    <!-- App Header -->
-    <header class="header">
-      <button type="button" class="header-btn menu-toggle" aria-label="Open menu" aria-controls="main-menu" aria-expanded="false">
-        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2"/></svg>
-      </button>
-      <div class="header-brand">
-        <div class="brand-logo">OH</div>
-        <div class="brand-text">
-          <span class="brand-title">OpenHaldex-S3</span>
-          <span class="brand-subtitle">by springfieldvw.com</span>
+        <div class="header-icons">
+          <button type="button" class="header-btn fullscreen-toggle" aria-label="Enter fullscreen">
+            <svg
+              class="fullscreen-icon expand-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"
+              />
+            </svg>
+            <svg
+              class="fullscreen-icon compress-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path
+                d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"
+              />
+            </svg>
+          </button>
+          <button type="button" class="header-btn theme-toggle" aria-label="Switch theme">
+            <svg
+              class="theme-icon sun-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <circle cx="12" cy="12" r="5" />
+              <line x1="12" y1="1" x2="12" y2="3" />
+              <line x1="12" y1="21" x2="12" y2="23" />
+              <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+              <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+              <line x1="1" y1="12" x2="3" y2="12" />
+              <line x1="21" y1="12" x2="23" y2="12" />
+              <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+              <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+            </svg>
+            <svg
+              class="theme-icon moon-icon"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+            </svg>
+          </button>
+          <div class="header-btn wifi-icon" role="status" aria-label="Wi-Fi connected">
+            <svg
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+              stroke-linecap="round"
+            >
+              <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+              <path d="M8.5 16.5a6 6 0 0 1 7 0" />
+              <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none" />
+            </svg>
+          </div>
         </div>
-      </div>
-      <div class="header-icons">
-        <button type="button" class="header-btn fullscreen-toggle" aria-label="Enter fullscreen">
-          <svg class="fullscreen-icon expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
-          </svg>
-          <svg class="fullscreen-icon compress-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
-          </svg>
-        </button>
-        <button type="button" class="header-btn theme-toggle" aria-label="Switch theme">
-          <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="5"/>
-            <line x1="12" y1="1" x2="12" y2="3"/>
-            <line x1="12" y1="21" x2="12" y2="23"/>
-            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
-            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
-            <line x1="1" y1="12" x2="3" y2="12"/>
-            <line x1="21" y1="12" x2="23" y2="12"/>
-            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
-            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
-          </svg>
-          <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
-          </svg>
-        </button>
-        <div class="header-btn wifi-icon" role="status" aria-label="Wi-Fi connected">
-          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
-            <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
-            <path d="M8.5 16.5a6 6 0 0 1 7 0"/>
-            <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/>
-          </svg>
+      </header>
+      <main class="page-main diag-main" aria-label="Diagnostics">
+        <div class="grid-container diag-grid">
+          <div class="col-12 col-md-6">
+            <section class="ui-card">
+              <div class="ui-section-head"><h2>Control</h2></div>
+              <div class="kv-grid">
+                <div class="kv-item">
+                  <span class="kv-label">Mode</span><span id="mode" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Enable Controller</span
+                  ><span id="controllerEnabled" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Broadcast Haldex</span
+                  ><span id="broadcast" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Haldex Gen</span
+                  ><span id="haldexGen" class="kv-value">-</span>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div class="col-12 col-md-6">
+            <section class="ui-card">
+              <div class="ui-section-head"><h2>Specified vs Actual</h2></div>
+              <div class="kv-grid">
+                <div class="kv-item">
+                  <span class="kv-label">Specified (lock)</span
+                  ><span id="spec" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Measured (lock)</span
+                  ><span id="act" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Haldex State</span
+                  ><span id="haldexState" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Engagement</span
+                  ><span id="haldexEngagement" class="kv-value">-</span>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div class="col-12 col-md-6">
+            <section class="ui-card">
+              <div class="ui-section-head"><h2>Vehicle</h2></div>
+              <div class="kv-grid">
+                <div class="kv-item">
+                  <span class="kv-label">Speed</span><span id="speed" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">RPM</span><span id="rpm" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Throttle</span
+                  ><span id="throttle" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Boost</span><span id="boost" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Clutch 1</span><span id="clutch1" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Clutch 2</span><span id="clutch2" class="kv-value">-</span>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div class="col-12 col-md-6">
+            <section class="ui-card">
+              <div class="ui-section-head"><h2>CAN</h2></div>
+              <div class="kv-grid">
+                <div class="kv-item">
+                  <span class="kv-label">Ready</span><span id="canReady" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Chassis</span
+                  ><span id="canChassis" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Haldex</span><span id="canHaldex" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Bus Failure</span
+                  ><span id="canFailure" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Last Chassis</span
+                  ><span id="lastChassis" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Last Haldex</span
+                  ><span id="lastHaldex" class="kv-value">-</span>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div class="col-12 col-md-6">
+            <section class="ui-card">
+              <div class="ui-section-head"><h2>Flags</h2></div>
+              <div class="kv-grid">
+                <div class="kv-item">
+                  <span class="kv-label">Temp Protection</span
+                  ><span id="tempProtection" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Coupling Open</span
+                  ><span id="couplingOpen" class="kv-value">-</span>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div class="col-12 col-md-6">
+            <section class="ui-card">
+              <div class="ui-section-head"><h2>Frame Diagnostic</h2></div>
+              <div class="kv-grid">
+                <div class="kv-item">
+                  <span class="kv-label">Map target</span
+                  ><span id="frameTarget" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">MOTOR1 (0x280)</span
+                  ><span id="frameM1" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">MOTOR3 (0x380)</span
+                  ><span id="frameM3" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">BRAKES1 (0x1A0)</span
+                  ><span id="frameB1" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">BRAKES2 (0x5A0)</span
+                  ><span id="frameB2" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">BRAKES3 (0x4A0)</span
+                  ><span id="frameB3" class="kv-value">-</span>
+                </div>
+              </div>
+            </section>
+          </div>
+          <div class="col-12">
+            <section class="ui-card">
+              <div class="ui-section-head"><h2>System</h2></div>
+              <div class="kv-grid">
+                <div class="kv-item">
+                  <span class="kv-label">Uptime</span><span id="uptime" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Network Mode</span
+                  ><span id="netMode" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">STA IP</span><span id="netStaIp" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">AP IP</span><span id="netApIp" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Hostname</span><span id="netHost" class="kv-value">-</span>
+                </div>
+                <div class="kv-item">
+                  <span class="kv-label">Internet</span
+                  ><span id="netInternet" class="kv-value">-</span>
+                </div>
+              </div>
+              <div id="status" class="ui-status" style="margin-top: 10px">Waiting for data...</div>
+            </section>
+          </div>
         </div>
-      </div>
-    </header>
-    <main class="page-main diag-main" aria-label="Diagnostics">
-      <div class="grid-container diag-grid">
-        <div class="col-12 col-md-6"><section class="ui-card"><div class="ui-section-head"><h2>Control</h2></div><div class="kv-grid"><div class="kv-item"><span class="kv-label">Mode</span><span id="mode" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Enable Controller</span><span id="controllerEnabled" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Broadcast Haldex</span><span id="broadcast" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Haldex Gen</span><span id="haldexGen" class="kv-value">-</span></div></div></section></div>
-        <div class="col-12 col-md-6"><section class="ui-card"><div class="ui-section-head"><h2>Specified vs Actual</h2></div><div class="kv-grid"><div class="kv-item"><span class="kv-label">Specified (lock)</span><span id="spec" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Measured (lock)</span><span id="act" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Haldex State</span><span id="haldexState" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Engagement</span><span id="haldexEngagement" class="kv-value">-</span></div></div></section></div>
-        <div class="col-12 col-md-6"><section class="ui-card"><div class="ui-section-head"><h2>Vehicle</h2></div><div class="kv-grid"><div class="kv-item"><span class="kv-label">Speed</span><span id="speed" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">RPM</span><span id="rpm" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Throttle</span><span id="throttle" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Boost</span><span id="boost" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Clutch 1</span><span id="clutch1" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Clutch 2</span><span id="clutch2" class="kv-value">-</span></div></div></section></div>
-        <div class="col-12 col-md-6"><section class="ui-card"><div class="ui-section-head"><h2>CAN</h2></div><div class="kv-grid"><div class="kv-item"><span class="kv-label">Ready</span><span id="canReady" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Chassis</span><span id="canChassis" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Haldex</span><span id="canHaldex" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Bus Failure</span><span id="canFailure" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Last Chassis</span><span id="lastChassis" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Last Haldex</span><span id="lastHaldex" class="kv-value">-</span></div></div></section></div>
-        <div class="col-12 col-md-6"><section class="ui-card"><div class="ui-section-head"><h2>Flags</h2></div><div class="kv-grid"><div class="kv-item"><span class="kv-label">Temp Protection</span><span id="tempProtection" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Coupling Open</span><span id="couplingOpen" class="kv-value">-</span></div></div></section></div>
-        <div class="col-12 col-md-6"><section class="ui-card"><div class="ui-section-head"><h2>Frame Diagnostic</h2></div><div class="kv-grid"><div class="kv-item"><span class="kv-label">Map target</span><span id="frameTarget" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">MOTOR1 (0x280)</span><span id="frameM1" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">MOTOR3 (0x380)</span><span id="frameM3" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">BRAKES1 (0x1A0)</span><span id="frameB1" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">BRAKES2 (0x5A0)</span><span id="frameB2" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">BRAKES3 (0x4A0)</span><span id="frameB3" class="kv-value">-</span></div></div></section></div>
-        <div class="col-12"><section class="ui-card"><div class="ui-section-head"><h2>System</h2></div><div class="kv-grid"><div class="kv-item"><span class="kv-label">Uptime</span><span id="uptime" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Network Mode</span><span id="netMode" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">STA IP</span><span id="netStaIp" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">AP IP</span><span id="netApIp" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Hostname</span><span id="netHost" class="kv-value">-</span></div><div class="kv-item"><span class="kv-label">Internet</span><span id="netInternet" class="kv-value">-</span></div></div><div id="status" class="ui-status" style="margin-top:10px;">Waiting for data...</div></section></div>
-      </div>
-    </main>
+      </main>
 
-    <footer class="footer">
-      <div>OpenHaldex-S3 &copy; SpringfieldVW.com</div>
-      <div class="version">
-        v0.6.0
-        <span class="update-available">
-          <svg viewBox="0 0 16 16">
-            <circle cx="8" cy="8" r="7" fill="currentColor"/>
-            <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="white" stroke-width="1.5"/>
-          </svg>
-          new version available
-        </span>
-      </div>
-    </footer>
-
-  </div>
-  <script src="./app.js"></script>
-</body>
+      <footer class="footer">
+        <div>OpenHaldex-S3 &copy; SpringfieldVW.com</div>
+        <div class="version">
+          v0.6.0
+          <span class="update-available">
+            <svg viewBox="0 0 16 16">
+              <circle cx="8" cy="8" r="7" fill="currentColor" />
+              <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="white" stroke-width="1.5" />
+            </svg>
+            new version available
+          </span>
+        </div>
+      </footer>
+    </div>
+    <script src="./app.js"></script>
+  </body>
 </html>
-
-
-
-
-
-
-
-
-

@@ -2,23 +2,23 @@
 // (c) 2026 SpringfieldVW.com
 // Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 
-const menuToggle = document.querySelector('.menu-toggle');
-const slideMenu = document.querySelector('.slide-menu');
-const menuBackdrop = document.querySelector('.menu-backdrop');
-const menuClose = document.querySelector('.menu-close');
-const menuItems = document.querySelectorAll('.menu-items a');
+const menuToggle = document.querySelector(".menu-toggle");
+const slideMenu = document.querySelector(".slide-menu");
+const menuBackdrop = document.querySelector(".menu-backdrop");
+const menuClose = document.querySelector(".menu-close");
+const menuItems = document.querySelectorAll(".menu-items a");
 
-const themeToggle = document.querySelector('.theme-toggle');
-const fullscreenToggle = document.querySelector('.fullscreen-toggle');
+const themeToggle = document.querySelector(".theme-toggle");
+const fullscreenToggle = document.querySelector(".fullscreen-toggle");
 
-const buttons = document.querySelectorAll('.btn-circle');
-const ratioSlider = document.querySelector('.ratio-slider');
-const ratioDisplay = document.querySelector('.ratio-display');
+const buttons = document.querySelectorAll(".btn-circle");
+const ratioSlider = document.querySelector(".ratio-slider");
+const ratioDisplay = document.querySelector(".ratio-display");
 const frontNumber = document.querySelector('.ratio-number[data-position="front"]');
 const rearNumber = document.querySelector('.ratio-number[data-position="rear"]');
-const ratioLabels = document.querySelectorAll('.ratio-label');
-const ratioSeparator = document.querySelector('.ratio-separator');
-const ratioLine = document.querySelector('.ratio-line');
+const ratioLabels = document.querySelectorAll(".ratio-label");
+const ratioSeparator = document.querySelector(".ratio-separator");
+const ratioLine = document.querySelector(".ratio-line");
 let lastLockRearBias = 50;
 
 function setMenuState(isOpen) {
@@ -26,14 +26,14 @@ function setMenuState(isOpen) {
     return;
   }
 
-  slideMenu.classList.toggle('active', isOpen);
-  slideMenu.setAttribute('aria-hidden', String(!isOpen));
+  slideMenu.classList.toggle("active", isOpen);
+  slideMenu.setAttribute("aria-hidden", String(!isOpen));
 
-  menuBackdrop.classList.toggle('active', isOpen);
+  menuBackdrop.classList.toggle("active", isOpen);
   menuBackdrop.hidden = !isOpen;
 
   if (menuToggle) {
-    menuToggle.setAttribute('aria-expanded', String(isOpen));
+    menuToggle.setAttribute("aria-expanded", String(isOpen));
   }
 }
 
@@ -42,7 +42,11 @@ function isEditableTarget(element) {
     return false;
   }
 
-  if (element instanceof HTMLInputElement || element instanceof HTMLTextAreaElement || element instanceof HTMLSelectElement) {
+  if (
+    element instanceof HTMLInputElement ||
+    element instanceof HTMLTextAreaElement ||
+    element instanceof HTMLSelectElement
+  ) {
     return true;
   }
 
@@ -51,12 +55,12 @@ function isEditableTarget(element) {
 
 function getStoredTheme() {
   try {
-    const saved = localStorage.getItem('theme');
-    if (saved === 'light' || saved === 'dark') {
+    const saved = localStorage.getItem("theme");
+    if (saved === "light" || saved === "dark") {
       return saved;
     }
-    const legacy = localStorage.getItem('ohTheme');
-    return legacy === 'light' || legacy === 'dark' ? legacy : null;
+    const legacy = localStorage.getItem("ohTheme");
+    return legacy === "light" || legacy === "dark" ? legacy : null;
   } catch {
     return null;
   }
@@ -66,20 +70,20 @@ function applyTheme(theme) {
   if (!document.body) {
     return;
   }
-  const normalized = theme === 'light' ? 'light' : 'dark';
+  const normalized = theme === "light" ? "light" : "dark";
   if (document.documentElement) {
     document.documentElement.dataset.theme = normalized;
-    document.documentElement.classList.toggle('dark', normalized === 'dark');
+    document.documentElement.classList.toggle("dark", normalized === "dark");
   }
   document.body.dataset.theme = normalized;
-  document.body.classList.toggle('dark', normalized === 'dark');
+  document.body.classList.toggle("dark", normalized === "dark");
 }
 
 function storeTheme(theme) {
   try {
-    const normalized = theme === 'light' ? 'light' : 'dark';
-    localStorage.setItem('theme', normalized);
-    localStorage.setItem('ohTheme', normalized);
+    const normalized = theme === "light" ? "light" : "dark";
+    localStorage.setItem("theme", normalized);
+    localStorage.setItem("ohTheme", normalized);
   } catch {
     // Ignore storage failures in restricted browser contexts.
   }
@@ -91,13 +95,13 @@ function updateThemeToggleLabel() {
   }
 
   const current = document.body.dataset.theme;
-  const next = current === 'dark' ? 'light' : 'dark';
-  themeToggle.setAttribute('aria-label', `Switch to ${next} theme`);
+  const next = current === "dark" ? "light" : "dark";
+  themeToggle.setAttribute("aria-label", `Switch to ${next} theme`);
 }
 
 function toggleTheme() {
   const current = document.body.dataset.theme;
-  const next = current === 'dark' ? 'light' : 'dark';
+  const next = current === "dark" ? "light" : "dark";
   applyTheme(next);
   storeTheme(next);
   updateThemeToggleLabel();
@@ -109,7 +113,10 @@ function updateFullscreenLabel() {
   }
 
   const inFullscreen = Boolean(document.fullscreenElement);
-  fullscreenToggle.setAttribute('aria-label', inFullscreen ? 'Exit fullscreen' : 'Enter fullscreen');
+  fullscreenToggle.setAttribute(
+    "aria-label",
+    inFullscreen ? "Exit fullscreen" : "Enter fullscreen"
+  );
 }
 
 function getModeLabel(button) {
@@ -118,7 +125,7 @@ function getModeLabel(button) {
     return mode.toUpperCase();
   }
 
-  const text = button?.querySelector('.btn-icon')?.textContent || '';
+  const text = button?.querySelector(".btn-icon")?.textContent || "";
   return text.trim().toUpperCase();
 }
 
@@ -127,11 +134,13 @@ function updateRatioProgress(value, maxOverride) {
     return;
   }
 
-  const max = Number.isFinite(Number(maxOverride)) ? Number(maxOverride) : parseInt(ratioSlider.max, 10);
+  const max = Number.isFinite(Number(maxOverride))
+    ? Number(maxOverride)
+    : parseInt(ratioSlider.max, 10);
   const safeMax = max > 0 ? max : 100;
   const clamped = Math.max(0, Math.min(safeMax, Number(value) || 0));
   const percent = (clamped / safeMax) * 100;
-  ratioLine.style.setProperty('--progress', `${percent}%`);
+  ratioLine.style.setProperty("--progress", `${percent}%`);
 }
 
 function setMode(button) {
@@ -139,27 +148,27 @@ function setMode(button) {
     return;
   }
 
-  const isLockMode = button.dataset.mode === 'lock';
+  const isLockMode = button.dataset.mode === "lock";
   const isMeterMode =
-    button.dataset.mode === 'speed' ||
-    button.dataset.mode === 'throttle' ||
-    button.dataset.mode === 'map' ||
-    button.dataset.mode === 'rpm';
+    button.dataset.mode === "speed" ||
+    button.dataset.mode === "throttle" ||
+    button.dataset.mode === "map" ||
+    button.dataset.mode === "rpm";
 
   buttons.forEach((candidate) => {
     const active = candidate === button;
-    candidate.classList.toggle('active', active);
-    candidate.setAttribute('aria-pressed', String(active));
+    candidate.classList.toggle("active", active);
+    candidate.setAttribute("aria-pressed", String(active));
   });
 
   if (isLockMode) {
-    ratioSlider.classList.add('slider-enabled');
-    ratioSlider.classList.remove('slider-meter');
+    ratioSlider.classList.add("slider-enabled");
+    ratioSlider.classList.remove("slider-meter");
     ratioSlider.disabled = false;
-    ratioSlider.setAttribute('aria-disabled', 'false');
-    ratioSlider.max = '50';
-    ratioSlider.step = '10';
-    ratioDisplay.classList.remove('single-text');
+    ratioSlider.setAttribute("aria-disabled", "false");
+    ratioSlider.max = "50";
+    ratioSlider.step = "10";
+    ratioDisplay.classList.remove("single-text");
 
     const rear = clampInt(lastLockRearBias, 0, 50);
     ratioSlider.value = String(rear);
@@ -168,11 +177,11 @@ function setMode(button) {
     frontNumber.textContent = String(front);
     rearNumber.textContent = String(rear);
     ratioLabels.forEach((label) => {
-      label.style.display = 'block';
+      label.style.display = "block";
     });
 
     if (ratioSeparator) {
-      ratioSeparator.style.display = 'block';
+      ratioSeparator.style.display = "block";
     }
 
     updateRatioProgress(rear);
@@ -180,90 +189,90 @@ function setMode(button) {
   }
 
   if (isMeterMode) {
-    ratioSlider.classList.remove('slider-enabled');
-    ratioSlider.classList.add('slider-meter');
+    ratioSlider.classList.remove("slider-enabled");
+    ratioSlider.classList.add("slider-meter");
     ratioSlider.disabled = true;
-    ratioSlider.setAttribute('aria-disabled', 'true');
-    ratioSlider.max = '100';
-    ratioSlider.step = '1';
-    ratioDisplay.classList.add('single-text');
+    ratioSlider.setAttribute("aria-disabled", "true");
+    ratioSlider.max = "100";
+    ratioSlider.step = "1";
+    ratioDisplay.classList.add("single-text");
     frontNumber.textContent = getModeLabel(button);
-    rearNumber.textContent = '';
+    rearNumber.textContent = "";
     ratioLabels.forEach((label) => {
-      label.style.display = 'none';
+      label.style.display = "none";
     });
     if (ratioSeparator) {
-      ratioSeparator.style.display = 'none';
+      ratioSeparator.style.display = "none";
     }
 
     // Meter modes start from zero and advance only from live request telemetry.
-    ratioSlider.value = '0';
+    ratioSlider.value = "0";
     updateRatioProgress(0, 100);
     return;
   }
 
-  ratioSlider.classList.remove('slider-enabled');
-  ratioSlider.classList.remove('slider-meter');
+  ratioSlider.classList.remove("slider-enabled");
+  ratioSlider.classList.remove("slider-meter");
   ratioSlider.disabled = true;
-  ratioSlider.setAttribute('aria-disabled', 'true');
-  ratioDisplay.classList.add('single-text');
+  ratioSlider.setAttribute("aria-disabled", "true");
+  ratioDisplay.classList.add("single-text");
 
   frontNumber.textContent = getModeLabel(button);
-  rearNumber.textContent = '';
+  rearNumber.textContent = "";
   ratioLabels.forEach((label) => {
-    label.style.display = 'none';
+    label.style.display = "none";
   });
 
   if (ratioSeparator) {
-    ratioSeparator.style.display = 'none';
+    ratioSeparator.style.display = "none";
   }
 
   if (ratioLine) {
-    ratioLine.style.setProperty('--progress', '100%');
+    ratioLine.style.setProperty("--progress", "100%");
   }
 }
 
 function lockModeFromRearBias(rearBias) {
   const rear = clampInt(rearBias, 0, 50);
   if (rear >= 50) {
-    return '5050';
+    return "5050";
   }
   if (rear >= 40) {
-    return '6040';
+    return "6040";
   }
   if (rear >= 30) {
-    return '7030';
+    return "7030";
   }
   if (rear >= 20) {
-    return '8020';
+    return "8020";
   }
   if (rear >= 10) {
-    return '9010';
+    return "9010";
   }
-  return 'FWD';
+  return "FWD";
 }
 
 function modeFromHomeButton(button) {
-  const mode = String(button?.dataset?.mode || '').toLowerCase();
-  if (mode === 'throttle') {
-    return 'THROTTLE';
+  const mode = String(button?.dataset?.mode || "").toLowerCase();
+  if (mode === "throttle") {
+    return "THROTTLE";
   }
-  if (mode === 'speed') {
-    return 'SPEED';
+  if (mode === "speed") {
+    return "SPEED";
   }
-  if (mode === 'rpm') {
-    return 'RPM';
+  if (mode === "rpm") {
+    return "RPM";
   }
-  if (mode === 'map') {
-    return 'MAP';
+  if (mode === "map") {
+    return "MAP";
   }
-  if (mode === 'off') {
-    return 'STOCK';
+  if (mode === "off") {
+    return "STOCK";
   }
-  if (mode === 'lock' && ratioSlider) {
+  if (mode === "lock" && ratioSlider) {
     return lockModeFromRearBias(lastLockRearBias);
   }
-  return '';
+  return "";
 }
 
 async function pushHomeMode(button) {
@@ -271,9 +280,9 @@ async function pushHomeMode(button) {
   if (!mode) {
     return;
   }
-  await apiJson('/api/mode', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+  await apiJson("/api/mode", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ mode }),
   });
 }
@@ -295,7 +304,7 @@ function initHomeTelemetry() {
 
   const buttonByMode = {};
   buttons.forEach((button) => {
-    const mode = String(button.dataset.mode || '').toLowerCase();
+    const mode = String(button.dataset.mode || "").toLowerCase();
     if (mode) {
       buttonByMode[mode] = button;
     }
@@ -305,30 +314,30 @@ function initHomeTelemetry() {
     if (status?.disableController && buttonByMode.off) {
       return buttonByMode.off;
     }
-    const mode = String(status?.mode || '').toUpperCase();
-    if (mode === 'SPEED' && buttonByMode.speed) {
+    const mode = String(status?.mode || "").toUpperCase();
+    if (mode === "SPEED" && buttonByMode.speed) {
       return buttonByMode.speed;
     }
-    if (mode === 'THROTTLE' && buttonByMode.throttle) {
+    if (mode === "THROTTLE" && buttonByMode.throttle) {
       return buttonByMode.throttle;
     }
-    if (mode === 'MAP' && buttonByMode.map) {
+    if (mode === "MAP" && buttonByMode.map) {
       return buttonByMode.map;
     }
-    if ((mode === 'STOCK' || mode === 'PASSTHRU') && buttonByMode.off) {
+    if ((mode === "STOCK" || mode === "PASSTHRU") && buttonByMode.off) {
       return buttonByMode.off;
     }
-    if (mode === 'RPM' && buttonByMode.rpm) {
+    if (mode === "RPM" && buttonByMode.rpm) {
       return buttonByMode.rpm;
     }
     if (
-      mode === '5050' ||
-      mode === '6040' ||
-      mode === '7030' ||
-      mode === '7525' ||
-      mode === '8020' ||
-      mode === '9010' ||
-      mode === 'FWD'
+      mode === "5050" ||
+      mode === "6040" ||
+      mode === "7030" ||
+      mode === "7525" ||
+      mode === "8020" ||
+      mode === "9010" ||
+      mode === "FWD"
     ) {
       return buttonByMode.lock || null;
     }
@@ -336,46 +345,50 @@ function initHomeTelemetry() {
   };
 
   const modeToRear = (statusMode) => {
-    const mode = String(statusMode || '').toUpperCase();
-    if (mode === '5050') {
+    const mode = String(statusMode || "").toUpperCase();
+    if (mode === "5050") {
       return 50;
     }
-    if (mode === '6040') {
+    if (mode === "6040") {
       return 40;
     }
-    if (mode === '7030' || mode === '7525') {
+    if (mode === "7030" || mode === "7525") {
       return 30;
     }
-    if (mode === '8020') {
+    if (mode === "8020") {
       return 20;
     }
-    if (mode === '9010') {
+    if (mode === "9010") {
       return 10;
     }
-    if (mode === 'FWD') {
+    if (mode === "FWD") {
       return 0;
     }
     return null;
   };
 
   const updateRatioMeterFromStatus = (status) => {
-    const mode = String(status?.mode || '').toUpperCase();
+    const mode = String(status?.mode || "").toUpperCase();
     const telemetry = status?.telemetry || {};
 
-    const activeMode = document.querySelector('.btn-circle.active')?.dataset?.mode || '';
-    const isMeterMode = activeMode === 'speed' || activeMode === 'throttle' || activeMode === 'map' || activeMode === 'rpm';
+    const activeMode = document.querySelector(".btn-circle.active")?.dataset?.mode || "";
+    const isMeterMode =
+      activeMode === "speed" ||
+      activeMode === "throttle" ||
+      activeMode === "map" ||
+      activeMode === "rpm";
     if (!isMeterMode) {
       return;
     }
 
     // Ignore stale status during mode transitions.
     if (
-      (activeMode === 'speed' && mode !== 'SPEED') ||
-      (activeMode === 'throttle' && mode !== 'THROTTLE') ||
-      (activeMode === 'map' && mode !== 'MAP') ||
-      (activeMode === 'rpm' && mode !== 'RPM')
+      (activeMode === "speed" && mode !== "SPEED") ||
+      (activeMode === "throttle" && mode !== "THROTTLE") ||
+      (activeMode === "map" && mode !== "MAP") ||
+      (activeMode === "rpm" && mode !== "RPM")
     ) {
-      ratioSlider.value = '0';
+      ratioSlider.value = "0";
       updateRatioProgress(0, 100);
       return;
     }
@@ -384,31 +397,34 @@ function initHomeTelemetry() {
     // while rendering a 0..100 rear bias meter.
     const rawSpec = Number(telemetry.spec);
     const specPercent = Number.isFinite(rawSpec) ? Math.max(0, Math.min(100, rawSpec)) : 0;
-    const requestRaw = 30 + (specPercent * 1.4);
-    const rear = requestRaw <= 30 ? 0 : Math.max(0, Math.min(100, Math.round(((requestRaw - 30) / 140) * 100)));
+    const requestRaw = 30 + specPercent * 1.4;
+    const rear =
+      requestRaw <= 30
+        ? 0
+        : Math.max(0, Math.min(100, Math.round(((requestRaw - 30) / 140) * 100)));
     const front = 100 - rear;
     ratioSlider.value = String(rear);
     updateRatioProgress(rear, 100);
 
-    const values = document.querySelectorAll('.data-item');
+    const values = document.querySelectorAll(".data-item");
     values.forEach((node) => {
-      const labelNode = node.querySelector('.data-label');
-      const valueNode = node.querySelector('.data-value');
+      const labelNode = node.querySelector(".data-label");
+      const valueNode = node.querySelector(".data-value");
       if (!labelNode || !valueNode) {
         return;
       }
       const label = labelNode.textContent.trim().toLowerCase();
-      if (label === 'setting') {
+      if (label === "setting") {
         valueNode.textContent = `${front} / ${rear}`;
-      } else if (label === 'mode') {
+      } else if (label === "mode") {
         valueNode.textContent = mode;
-      } else if (label === 'speed' && Number.isFinite(Number(telemetry.speed))) {
+      } else if (label === "speed" && Number.isFinite(Number(telemetry.speed))) {
         valueNode.textContent = `${Math.round(Number(telemetry.speed))} km/h`;
-      } else if (label === 'engine speed' && Number.isFinite(Number(telemetry.rpm))) {
+      } else if (label === "engine speed" && Number.isFinite(Number(telemetry.rpm))) {
         valueNode.textContent = `${Math.round(Number(telemetry.rpm))} rpm`;
-      } else if (label === 'boost' && Number.isFinite(Number(telemetry.boost))) {
+      } else if (label === "boost" && Number.isFinite(Number(telemetry.boost))) {
         valueNode.textContent = `${Number(telemetry.boost).toFixed(1)} kPa`;
-      } else if (label === 'throttle' && Number.isFinite(Number(telemetry.throttle))) {
+      } else if (label === "throttle" && Number.isFinite(Number(telemetry.throttle))) {
         valueNode.textContent = `${Math.round(Number(telemetry.throttle))}`;
       }
     });
@@ -416,13 +432,13 @@ function initHomeTelemetry() {
 
   const syncFromStatus = async () => {
     try {
-      const status = await apiJson('/api/status');
+      const status = await apiJson("/api/status");
       const target = modeToButton(status);
-      if (target && target !== document.querySelector('.btn-circle.active')) {
+      if (target && target !== document.querySelector(".btn-circle.active")) {
         setMode(target);
       }
 
-      if (target && target.dataset.mode === 'lock') {
+      if (target && target.dataset.mode === "lock") {
         const lockRear = modeToRear(status.mode);
         if (Number.isFinite(lockRear)) {
           lastLockRearBias = clampInt(lockRear, 0, 50);
@@ -441,7 +457,7 @@ function initHomeTelemetry() {
 
   syncFromStatus();
   pollTimer = window.setInterval(syncFromStatus, 1000);
-  window.addEventListener('beforeunload', () => {
+  window.addEventListener("beforeunload", () => {
     if (pollTimer) {
       window.clearInterval(pollTimer);
     }
@@ -451,13 +467,13 @@ function initHomeTelemetry() {
 async function apiJson(url, options) {
   const res = await fetch(url, options);
   if (!res.ok) {
-    let detail = '';
+    let detail = "";
     try {
       detail = await res.text();
     } catch {
-      detail = '';
+      detail = "";
     }
-    throw new Error(`HTTP ${res.status}${detail ? ` ${detail}` : ''}`);
+    throw new Error(`HTTP ${res.status}${detail ? ` ${detail}` : ""}`);
   }
   return res.json();
 }
@@ -470,13 +486,13 @@ async function fetchJson(url, options) {
 async function apiText(url, options) {
   const res = await fetch(url, options);
   if (!res.ok) {
-    let detail = '';
+    let detail = "";
     try {
       detail = await res.text();
     } catch {
-      detail = '';
+      detail = "";
     }
-    throw new Error(`HTTP ${res.status}${detail ? ` ${detail}` : ''}`);
+    throw new Error(`HTTP ${res.status}${detail ? ` ${detail}` : ""}`);
   }
   return res.text();
 }
@@ -493,25 +509,25 @@ function formatBytes(bytes) {
 }
 
 function sanitizeFilename(name) {
-  return String(name || 'log').replace(/[\\/:*?"<>|]+/g, '_');
+  return String(name || "log").replace(/[\\/:*?"<>|]+/g, "_");
 }
 
 function initSetupPage() {
-  const signalPicker = document.getElementById('signal-picker');
-  const signalPickerToggle = document.getElementById('signal-picker-toggle');
-  const signalPickerValue = document.getElementById('signal-picker-value');
-  const signalPickerMenu = document.getElementById('signal-picker-menu');
-  const mapSelectedButton = document.getElementById('map-selected-button');
-  const addDashButton = document.getElementById('toggle-display-button');
-  const mappedInputList = document.getElementById('mapped-input-list');
-  const displaySignalList = document.getElementById('display-signal-list');
-  const mappingStatus = document.getElementById('mapping-status');
-  const haldexGenPicker = document.getElementById('haldex-gen-picker');
-  const haldexGenToggle = document.getElementById('haldex-gen-toggle');
-  const haldexGenValue = document.getElementById('haldex-gen-value');
-  const haldexGenMenu = document.getElementById('haldex-gen-menu');
-  const clearMappingsButton = document.getElementById('clear-mappings');
-  const saveProfileButton = document.getElementById('save-profile');
+  const signalPicker = document.getElementById("signal-picker");
+  const signalPickerToggle = document.getElementById("signal-picker-toggle");
+  const signalPickerValue = document.getElementById("signal-picker-value");
+  const signalPickerMenu = document.getElementById("signal-picker-menu");
+  const mapSelectedButton = document.getElementById("map-selected-button");
+  const addDashButton = document.getElementById("toggle-display-button");
+  const mappedInputList = document.getElementById("mapped-input-list");
+  const displaySignalList = document.getElementById("display-signal-list");
+  const mappingStatus = document.getElementById("mapping-status");
+  const haldexGenPicker = document.getElementById("haldex-gen-picker");
+  const haldexGenToggle = document.getElementById("haldex-gen-toggle");
+  const haldexGenValue = document.getElementById("haldex-gen-value");
+  const haldexGenMenu = document.getElementById("haldex-gen-menu");
+  const clearMappingsButton = document.getElementById("clear-mappings");
+  const saveProfileButton = document.getElementById("save-profile");
 
   if (
     !signalPicker ||
@@ -524,53 +540,57 @@ function initSetupPage() {
     return;
   }
 
-  const LOCAL_PROFILE_KEY = 'ohSetupProfile';
+  const LOCAL_PROFILE_KEY = "ohSetupProfile";
   const requiredInputs = [
-    { key: 'speed', label: 'Speed' },
-    { key: 'throttle', label: 'Throttle' },
-    { key: 'rpm', label: 'Engine RPM' },
+    { key: "speed", label: "Speed" },
+    { key: "throttle", label: "Throttle" },
+    { key: "rpm", label: "Engine RPM" },
   ];
   const dashSlots = Array.from({ length: 8 }).map((_, idx) => ({
     key: `dash_${idx + 1}`,
     label: `Dashboard ${idx + 1}`,
   }));
-  const defaultMappings = Object.fromEntries(requiredInputs.map((item) => [item.key, '']));
-  const defaultDashMappings = Object.fromEntries(dashSlots.map((slot) => [slot.key, '']));
+  const defaultMappings = Object.fromEntries(requiredInputs.map((item) => [item.key, ""]));
+  const defaultDashMappings = Object.fromEntries(dashSlots.map((slot) => [slot.key, ""]));
 
   let decodedSignals = [];
   let signalById = new Map();
-  let selectedSignalId = '';
+  let selectedSignalId = "";
   let selectedInputKey = requiredInputs[0].key;
   let selectedDashKey = dashSlots[0].key;
   let mappings = { ...defaultMappings };
   let dashMappings = { ...defaultDashMappings };
-  let currentHaldexGen = '2';
+  let currentHaldexGen = "2";
   let pollTimer = null;
   let pollBusy = false;
   let deferredSignalPickerRender = false;
   let deferredSetupRender = false;
 
   function escapeHtml(value) {
-    return String(value || '')
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&#39;');
+    return String(value || "")
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
   }
 
-  function normalizeSignalDisplayValue(value, unit = '', signalName = '') {
+  function normalizeSignalDisplayValue(value, unit = "", signalName = "") {
     const n = Number(value);
     if (!Number.isFinite(n)) {
       return value;
     }
 
-    const normalizedUnit = String(unit || '').trim().toLowerCase();
-    const normalizedName = String(signalName || '').trim().toLowerCase();
+    const normalizedUnit = String(unit || "")
+      .trim()
+      .toLowerCase();
+    const normalizedName = String(signalName || "")
+      .trim()
+      .toLowerCase();
 
     // Some decoded RPM signals are published at 1/100 scale (8.25 -> 825).
     // Normalize here so setup selection matches the dashboard/telemetry readout.
-    if (normalizedUnit === 'rpm' || normalizedName.includes('rpm')) {
+    if (normalizedUnit === "rpm" || normalizedName.includes("rpm")) {
       const abs = Math.abs(n);
       if (abs > 0 && abs < 20) {
         const scaled = n * 100;
@@ -583,35 +603,41 @@ function initSetupPage() {
     return n;
   }
 
-  function formatValue(value, unit = '', signalName = '') {
-    if (value === null || value === undefined || value === '') {
-      return '--';
+  function formatValue(value, unit = "", signalName = "") {
+    if (value === null || value === undefined || value === "") {
+      return "--";
     }
     const n = Number(normalizeSignalDisplayValue(value, unit, signalName));
     if (!Number.isFinite(n)) {
       return String(value);
     }
 
-    const normalizedUnit = String(unit || '').trim().toLowerCase();
-    if (normalizedUnit === 'rpm') {
-      return Math.abs(n) >= 20 ? String(Math.round(n)) : n.toFixed(2).replace(/\.?0+$/, '');
+    const normalizedUnit = String(unit || "")
+      .trim()
+      .toLowerCase();
+    if (normalizedUnit === "rpm") {
+      return Math.abs(n) >= 20 ? String(Math.round(n)) : n.toFixed(2).replace(/\.?0+$/, "");
     }
 
     if (Math.abs(n) >= 1000) {
       return String(Math.round(n));
     }
     if (Math.abs(n) >= 100) {
-      return n.toFixed(1).replace(/\.?0+$/, '');
+      return n.toFixed(1).replace(/\.?0+$/, "");
     }
-    return n.toFixed(2).replace(/\.?0+$/, '');
+    return n.toFixed(2).replace(/\.?0+$/, "");
   }
 
   function formatSignal(item) {
-    const bus = String(item?.bus || 'all').toLowerCase();
+    const bus = String(item?.bus || "all").toLowerCase();
     const id = Number(item?.id);
-    const frame = Number.isFinite(id) ? `0x${id.toString(16).toUpperCase()}` : String(item?.id || '');
-    const signal = String(item?.name || 'Signal').replace(/_/g, ' ').trim();
-    const unit = String(item?.unit || '').trim();
+    const frame = Number.isFinite(id)
+      ? `0x${id.toString(16).toUpperCase()}`
+      : String(item?.id || "");
+    const signal = String(item?.name || "Signal")
+      .replace(/_/g, " ")
+      .trim();
+    const unit = String(item?.unit || "").trim();
     const hz = Number(item?.hz || 0);
     const value = item?.value;
     const key = `${bus}|${frame}|${signal}|${unit}`.toLowerCase();
@@ -625,7 +651,7 @@ function initSetupPage() {
         return null;
       }
       const parsed = JSON.parse(raw);
-      return parsed && typeof parsed === 'object' ? parsed : null;
+      return parsed && typeof parsed === "object" ? parsed : null;
     } catch {
       return null;
     }
@@ -650,19 +676,19 @@ function initSetupPage() {
       return;
     }
     mappingStatus.textContent = message;
-    mappingStatus.classList.toggle('pending', Boolean(isPending));
+    mappingStatus.classList.toggle("pending", Boolean(isPending));
   }
 
   function getSignalById(signalId) {
-    return signalById.get(String(signalId || '').toLowerCase()) || null;
+    return signalById.get(String(signalId || "").toLowerCase()) || null;
   }
 
   function signalSummary(signalId) {
     const s = getSignalById(signalId);
     if (!s) {
-      return { name: 'Not Assigned', value: '--' };
+      return { name: "Not Assigned", value: "--" };
     }
-    const value = `${formatValue(s.value, s.unit, s.signal)}${s.unit ? ` ${s.unit}` : ''}`;
+    const value = `${formatValue(s.value, s.unit, s.signal)}${s.unit ? ` ${s.unit}` : ""}`;
     return {
       name: `${s.frame} ${s.signal}`.trim(),
       value,
@@ -670,14 +696,14 @@ function initSetupPage() {
   }
 
   function isSignalPickerOpen() {
-    return signalPicker.classList.contains('open') && !signalPickerMenu.hidden;
+    return signalPicker.classList.contains("open") && !signalPickerMenu.hidden;
   }
 
   function setPickerOpen(isOpen) {
     if (!isOpen) {
-      signalPicker.classList.remove('open-up');
-      signalPicker.classList.remove('open');
-      signalPickerToggle.setAttribute('aria-expanded', 'false');
+      signalPicker.classList.remove("open-up");
+      signalPicker.classList.remove("open");
+      signalPickerToggle.setAttribute("aria-expanded", "false");
       signalPickerMenu.hidden = true;
       if (deferredSignalPickerRender || deferredSetupRender) {
         deferredSignalPickerRender = false;
@@ -687,8 +713,8 @@ function initSetupPage() {
       return;
     }
     updatePickerDirection(signalPicker, signalPickerMenu);
-    signalPicker.classList.toggle('open', isOpen);
-    signalPickerToggle.setAttribute('aria-expanded', String(Boolean(isOpen)));
+    signalPicker.classList.toggle("open", isOpen);
+    signalPickerToggle.setAttribute("aria-expanded", String(Boolean(isOpen)));
     signalPickerMenu.hidden = !isOpen;
   }
 
@@ -697,15 +723,15 @@ function initSetupPage() {
       return;
     }
     if (!isOpen) {
-      haldexGenPicker.classList.remove('open-up');
-      haldexGenPicker.classList.remove('open');
-      haldexGenToggle.setAttribute('aria-expanded', 'false');
+      haldexGenPicker.classList.remove("open-up");
+      haldexGenPicker.classList.remove("open");
+      haldexGenToggle.setAttribute("aria-expanded", "false");
       haldexGenMenu.hidden = true;
       return;
     }
     updatePickerDirection(haldexGenPicker, haldexGenMenu);
-    haldexGenPicker.classList.toggle('open', isOpen);
-    haldexGenToggle.setAttribute('aria-expanded', String(Boolean(isOpen)));
+    haldexGenPicker.classList.toggle("open", isOpen);
+    haldexGenToggle.setAttribute("aria-expanded", String(Boolean(isOpen)));
     haldexGenMenu.hidden = !isOpen;
   }
 
@@ -722,7 +748,7 @@ function initSetupPage() {
     const spaceBelow = window.innerHeight - rect.bottom;
     const spaceAbove = rect.top;
     const openUp = spaceBelow < menuHeight && spaceAbove > spaceBelow;
-    pickerNode.classList.toggle('open-up', openUp);
+    pickerNode.classList.toggle("open-up", openUp);
     if (wasHidden) {
       menuNode.hidden = true;
     }
@@ -731,25 +757,26 @@ function initSetupPage() {
   function refreshPickerLabel() {
     const selected = getSignalById(selectedSignalId);
     if (!selected) {
-      signalPickerValue.textContent = 'Select signal';
+      signalPickerValue.textContent = "Select signal";
       return;
     }
-    const value = `${formatValue(selected.value, selected.unit, selected.signal)}${selected.unit ? ` ${selected.unit}` : ''}`;
+    const value = `${formatValue(selected.value, selected.unit, selected.signal)}${selected.unit ? ` ${selected.unit}` : ""}`;
     signalPickerValue.textContent = `${selected.frame} | ${selected.signal} | ${value}`;
   }
 
   function renderSignalPicker() {
     if (!decodedSignals.length) {
-      signalPickerMenu.innerHTML = '<div class="signal-picker-empty">No live decoded signals yet</div>';
+      signalPickerMenu.innerHTML =
+        '<div class="signal-picker-empty">No live decoded signals yet</div>';
       refreshPickerLabel();
       return;
     }
 
     const items = decodedSignals
       .map((signal) => {
-        const selectedClass = signal.key === selectedSignalId ? ' is-selected' : '';
-        const value = `${formatValue(signal.value, signal.unit, signal.signal)}${signal.unit ? ` ${signal.unit}` : ''}`;
-        const busLabel = String(signal.bus || '').toUpperCase();
+        const selectedClass = signal.key === selectedSignalId ? " is-selected" : "";
+        const value = `${formatValue(signal.value, signal.unit, signal.signal)}${signal.unit ? ` ${signal.unit}` : ""}`;
+        const busLabel = String(signal.bus || "").toUpperCase();
         return `
           <button type="button" class="signal-option${selectedClass}" data-signal-id="${escapeHtml(signal.key)}" role="option" aria-selected="${signal.key === selectedSignalId}">
             <span class="signal-option-main">${escapeHtml(signal.signal)}</span>
@@ -758,7 +785,7 @@ function initSetupPage() {
           </button>
         `;
       })
-      .join('');
+      .join("");
 
     signalPickerMenu.innerHTML = items;
     refreshPickerLabel();
@@ -775,10 +802,10 @@ function initSetupPage() {
     if (!haldexGenMenu) {
       return;
     }
-    haldexGenMenu.querySelectorAll('[data-haldex-gen]').forEach((item) => {
-      const active = String(item.getAttribute('data-haldex-gen') || '') === currentHaldexGen;
-      item.classList.toggle('is-selected', active);
-      item.setAttribute('aria-selected', String(active));
+    haldexGenMenu.querySelectorAll("[data-haldex-gen]").forEach((item) => {
+      const active = String(item.getAttribute("data-haldex-gen") || "") === currentHaldexGen;
+      item.classList.toggle("is-selected", active);
+      item.setAttribute("aria-selected", String(active));
     });
     refreshGenPickerLabel();
   }
@@ -787,10 +814,10 @@ function initSetupPage() {
     mappedInputList.innerHTML = requiredInputs
       .map((input) => {
         const active = input.key === selectedInputKey;
-        const assigned = mappings[input.key] || '';
+        const assigned = mappings[input.key] || "";
         const summary = signalSummary(assigned);
-        const activeClass = active ? ' is-active' : '';
-        const assignedClass = assigned ? ' is-assigned' : '';
+        const activeClass = active ? " is-active" : "";
+        const assignedClass = assigned ? " is-assigned" : "";
         return `
           <li class="setup-map-row${activeClass}${assignedClass}" data-input-key="${escapeHtml(input.key)}" role="button" tabindex="0" aria-pressed="${active}">
             <div class="setup-map-main">
@@ -801,17 +828,17 @@ function initSetupPage() {
           </li>
         `;
       })
-      .join('');
+      .join("");
   }
 
   function renderDashSignals() {
     displaySignalList.innerHTML = dashSlots
       .map((slot) => {
         const active = slot.key === selectedDashKey;
-        const assigned = dashMappings[slot.key] || '';
+        const assigned = dashMappings[slot.key] || "";
         const summary = signalSummary(assigned);
-        const activeClass = active ? ' is-active' : '';
-        const assignedClass = assigned ? ' is-assigned' : '';
+        const activeClass = active ? " is-active" : "";
+        const assignedClass = assigned ? " is-assigned" : "";
         return `
           <li class="setup-map-row${activeClass}${assignedClass}" data-dash-key="${escapeHtml(slot.key)}" role="button" tabindex="0" aria-pressed="${active}">
             <div class="setup-map-main">
@@ -822,7 +849,7 @@ function initSetupPage() {
           </li>
         `;
       })
-      .join('');
+      .join("");
   }
 
   function renderAll(options = {}) {
@@ -849,7 +876,7 @@ function initSetupPage() {
     }
     pollBusy = true;
     try {
-      const payload = await apiJson('/api/canview?decoded=300&raw=0&bus=all');
+      const payload = await apiJson("/api/canview?decoded=300&raw=0&bus=all");
       decodedSignals = (Array.isArray(payload?.decoded) ? payload.decoded : [])
         .map((item) => formatSignal(item))
         .sort((left, right) => {
@@ -861,7 +888,7 @@ function initSetupPage() {
         });
       signalById = new Map(decodedSignals.map((signal) => [signal.key, signal]));
       if (selectedSignalId && !signalById.has(selectedSignalId)) {
-        selectedSignalId = '';
+        selectedSignalId = "";
       }
       renderAll({ skipSignalPicker: isSignalPickerOpen() });
     } catch (error) {
@@ -875,15 +902,15 @@ function initSetupPage() {
     const payload = {
       haldexGeneration: Number(currentHaldexGen) || 2,
       inputMappings: {
-        speed: mappings.speed || '',
-        throttle: mappings.throttle || '',
-        rpm: mappings.rpm || '',
+        speed: mappings.speed || "",
+        throttle: mappings.throttle || "",
+        rpm: mappings.rpm || "",
       },
     };
     try {
-      await apiJson('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await apiJson("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       return true;
@@ -895,25 +922,25 @@ function initSetupPage() {
 
   function assignSelectedToInput() {
     if (!selectedSignalId) {
-      setStatus('Select a signal first.', true);
+      setStatus("Select a signal first.", true);
       return;
     }
     mappings[selectedInputKey] = selectedSignalId;
     renderMappedInputs();
     writeProfile();
-    setStatus('Input mapped.');
+    setStatus("Input mapped.");
     renderAll();
   }
 
   function assignSelectedToDash() {
     if (!selectedSignalId) {
-      setStatus('Select a signal first.', true);
+      setStatus("Select a signal first.", true);
       return;
     }
     dashMappings[selectedDashKey] = selectedSignalId;
     renderDashSignals();
     writeProfile();
-    setStatus('Dashboard slot mapped.');
+    setStatus("Dashboard slot mapped.");
     renderAll();
   }
 
@@ -922,51 +949,51 @@ function initSetupPage() {
     dashMappings = { ...defaultDashMappings };
     writeProfile();
     renderAll();
-    setStatus('Mappings cleared.');
+    setStatus("Mappings cleared.");
   }
 
   async function saveProfile() {
     const hasMappedInput = requiredInputs.every((input) => Boolean(mappings[input.key]));
     if (!hasMappedInput) {
-      setStatus('Map Speed, Throttle, and Engine RPM before saving.', true);
+      setStatus("Map Speed, Throttle, and Engine RPM before saving.", true);
       return;
     }
     writeProfile();
     const ok = await saveSetupToDevice();
     if (ok) {
-      setStatus('Profile saved to device.');
+      setStatus("Profile saved to device.");
     }
   }
 
   async function initFromStoredProfile() {
     const profile = readProfile();
-    if (profile?.mappings && typeof profile.mappings === 'object') {
+    if (profile?.mappings && typeof profile.mappings === "object") {
       mappings = { ...defaultMappings, ...profile.mappings };
       if (!mappings.rpm && profile.mappings.engine_rpm) {
         mappings.rpm = String(profile.mappings.engine_rpm);
       }
     }
-    if (profile?.dashMappings && typeof profile.dashMappings === 'object') {
+    if (profile?.dashMappings && typeof profile.dashMappings === "object") {
       dashMappings = { ...defaultDashMappings, ...profile.dashMappings };
     }
-    const storedGen = String(profile?.haldexGeneration || '');
-    if (storedGen === '1' || storedGen === '2' || storedGen === '4') {
+    const storedGen = String(profile?.haldexGeneration || "");
+    if (storedGen === "1" || storedGen === "2" || storedGen === "4") {
       currentHaldexGen = storedGen;
     }
 
     try {
-      const status = await apiJson('/api/status');
+      const status = await apiJson("/api/status");
       const apiMappings = status?.inputMappings;
-      if (apiMappings && typeof apiMappings === 'object') {
+      if (apiMappings && typeof apiMappings === "object") {
         mappings = {
           ...mappings,
-          speed: String(apiMappings.speed || ''),
-          throttle: String(apiMappings.throttle || ''),
-          rpm: String(apiMappings.rpm || ''),
+          speed: String(apiMappings.speed || ""),
+          throttle: String(apiMappings.throttle || ""),
+          rpm: String(apiMappings.rpm || ""),
         };
       }
-      const apiGen = String(status?.haldexGeneration || '');
-      if (apiGen === '1' || apiGen === '2' || apiGen === '4') {
+      const apiGen = String(status?.haldexGeneration || "");
+      if (apiGen === "1" || apiGen === "2" || apiGen === "4") {
         currentHaldexGen = apiGen;
       }
     } catch {
@@ -976,34 +1003,34 @@ function initSetupPage() {
     renderGenPickerOptions();
   }
 
-  signalPickerToggle.addEventListener('click', () => {
-    setPickerOpen(!signalPicker.classList.contains('open'));
+  signalPickerToggle.addEventListener("click", () => {
+    setPickerOpen(!signalPicker.classList.contains("open"));
   });
 
-  signalPickerMenu.addEventListener('click', (event) => {
-    const button = event.target.closest('[data-signal-id]');
+  signalPickerMenu.addEventListener("click", (event) => {
+    const button = event.target.closest("[data-signal-id]");
     if (!button) {
       return;
     }
-    selectedSignalId = String(button.dataset.signalId || '');
+    selectedSignalId = String(button.dataset.signalId || "");
     renderSignalPicker();
     setPickerOpen(false);
   });
 
   if (haldexGenToggle) {
-    haldexGenToggle.addEventListener('click', () => {
-      setGenPickerOpen(!(haldexGenPicker && haldexGenPicker.classList.contains('open')));
+    haldexGenToggle.addEventListener("click", () => {
+      setGenPickerOpen(!(haldexGenPicker && haldexGenPicker.classList.contains("open")));
     });
   }
 
   if (haldexGenMenu) {
-    haldexGenMenu.addEventListener('click', (event) => {
-      const button = event.target.closest('[data-haldex-gen]');
+    haldexGenMenu.addEventListener("click", (event) => {
+      const button = event.target.closest("[data-haldex-gen]");
       if (!button) {
         return;
       }
-      const next = String(button.getAttribute('data-haldex-gen') || '');
-      if (next !== '1' && next !== '2' && next !== '4') {
+      const next = String(button.getAttribute("data-haldex-gen") || "");
+      if (next !== "1" && next !== "2" && next !== "4") {
         return;
       }
       currentHaldexGen = next;
@@ -1015,7 +1042,7 @@ function initSetupPage() {
     });
   }
 
-  document.addEventListener('click', (event) => {
+  document.addEventListener("click", (event) => {
     if (!signalPicker.contains(event.target)) {
       setPickerOpen(false);
     }
@@ -1024,21 +1051,23 @@ function initSetupPage() {
     }
   });
 
-  mappedInputList.addEventListener('click', (event) => {
-    const row = event.target.closest('[data-input-key]');
+  mappedInputList.addEventListener("click", (event) => {
+    const row = event.target.closest("[data-input-key]");
     if (!row) {
       return;
     }
     selectedInputKey = String(row.dataset.inputKey || selectedInputKey);
     renderMappedInputs();
-    setStatus(`Target input: ${requiredInputs.find((item) => item.key === selectedInputKey)?.label || selectedInputKey}`);
+    setStatus(
+      `Target input: ${requiredInputs.find((item) => item.key === selectedInputKey)?.label || selectedInputKey}`
+    );
   });
 
-  mappedInputList.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') {
+  mappedInputList.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") {
       return;
     }
-    const row = event.target.closest('[data-input-key]');
+    const row = event.target.closest("[data-input-key]");
     if (!row) {
       return;
     }
@@ -1047,21 +1076,23 @@ function initSetupPage() {
     renderMappedInputs();
   });
 
-  displaySignalList.addEventListener('click', (event) => {
-    const row = event.target.closest('[data-dash-key]');
+  displaySignalList.addEventListener("click", (event) => {
+    const row = event.target.closest("[data-dash-key]");
     if (!row) {
       return;
     }
     selectedDashKey = String(row.dataset.dashKey || selectedDashKey);
     renderDashSignals();
-    setStatus(`Target dashboard slot: ${dashSlots.find((slot) => slot.key === selectedDashKey)?.label || selectedDashKey}`);
+    setStatus(
+      `Target dashboard slot: ${dashSlots.find((slot) => slot.key === selectedDashKey)?.label || selectedDashKey}`
+    );
   });
 
-  displaySignalList.addEventListener('keydown', (event) => {
-    if (event.key !== 'Enter' && event.key !== ' ') {
+  displaySignalList.addEventListener("keydown", (event) => {
+    if (event.key !== "Enter" && event.key !== " ") {
       return;
     }
-    const row = event.target.closest('[data-dash-key]');
+    const row = event.target.closest("[data-dash-key]");
     if (!row) {
       return;
     }
@@ -1071,25 +1102,25 @@ function initSetupPage() {
   });
 
   if (mapSelectedButton) {
-    mapSelectedButton.addEventListener('click', assignSelectedToInput);
+    mapSelectedButton.addEventListener("click", assignSelectedToInput);
   }
   if (addDashButton) {
-    addDashButton.addEventListener('click', assignSelectedToDash);
+    addDashButton.addEventListener("click", assignSelectedToDash);
   }
   if (clearMappingsButton) {
-    clearMappingsButton.addEventListener('click', clearAllMappings);
+    clearMappingsButton.addEventListener("click", clearAllMappings);
   }
   if (saveProfileButton) {
-    saveProfileButton.addEventListener('click', saveProfile);
+    saveProfileButton.addEventListener("click", saveProfile);
   }
 
   initFromStoredProfile().finally(() => {
     renderAll();
-    setStatus('Click a target row, pick a signal, then assign.', true);
+    setStatus("Click a target row, pick a signal, then assign.", true);
 
     loadSignals();
     pollTimer = window.setInterval(loadSignals, 1000);
-    window.addEventListener('beforeunload', () => {
+    window.addEventListener("beforeunload", () => {
       if (pollTimer) {
         window.clearInterval(pollTimer);
       }
@@ -1098,47 +1129,47 @@ function initSetupPage() {
 }
 
 function initCurvePage() {
-  const page = String(document.body?.dataset?.page || '').toLowerCase();
-  if (page !== 'speed' && page !== 'throttle' && page !== 'rpm') {
+  const page = String(document.body?.dataset?.page || "").toLowerCase();
+  if (page !== "speed" && page !== "throttle" && page !== "rpm") {
     return;
   }
 
-  const card = document.querySelector('.curve-card');
-  const rowsNode = document.getElementById('curveRows');
-  const statusNode = document.getElementById('curveStatus');
-  const liveNode = document.getElementById('curveLiveValue');
-  const btnLoad = document.getElementById('curveLoad');
-  const btnAdd = document.getElementById('curveAdd');
-  const btnReset = document.getElementById('curveReset');
-  const btnSave = document.getElementById('curveSave');
-  const disengageInput = document.getElementById('curveDisengageSpeed');
-  const disengageToggle = document.getElementById('curveEnableDisengageSpeed');
-  const btnDisengageSave = document.getElementById('curveDisengageSave');
-  const throttleGateInput = document.getElementById('curveDisableThrottle');
-  const throttleGateToggle = document.getElementById('curveEnableThrottleGate');
-  const speedGateInput = document.getElementById('curveDisableSpeed');
-  const speedGateToggle = document.getElementById('curveEnableSpeedGate');
-  const releaseRateInput = document.getElementById('curveReleaseRate');
-  const releaseRateToggle = document.getElementById('curveEnableReleaseRate');
-  const broadcastToggle = document.getElementById('curveBroadcastBridge');
-  const controllerToggle = document.getElementById('curveControllerEnabled');
+  const card = document.querySelector(".curve-card");
+  const rowsNode = document.getElementById("curveRows");
+  const statusNode = document.getElementById("curveStatus");
+  const liveNode = document.getElementById("curveLiveValue");
+  const btnLoad = document.getElementById("curveLoad");
+  const btnAdd = document.getElementById("curveAdd");
+  const btnReset = document.getElementById("curveReset");
+  const btnSave = document.getElementById("curveSave");
+  const disengageInput = document.getElementById("curveDisengageSpeed");
+  const disengageToggle = document.getElementById("curveEnableDisengageSpeed");
+  const btnDisengageSave = document.getElementById("curveDisengageSave");
+  const throttleGateInput = document.getElementById("curveDisableThrottle");
+  const throttleGateToggle = document.getElementById("curveEnableThrottleGate");
+  const speedGateInput = document.getElementById("curveDisableSpeed");
+  const speedGateToggle = document.getElementById("curveEnableSpeedGate");
+  const releaseRateInput = document.getElementById("curveReleaseRate");
+  const releaseRateToggle = document.getElementById("curveEnableReleaseRate");
+  const broadcastToggle = document.getElementById("curveBroadcastBridge");
+  const controllerToggle = document.getElementById("curveControllerEnabled");
   if (!card || !rowsNode || !statusNode) {
     return;
   }
 
-  const isSpeed = page === 'speed';
-  const isThrottle = page === 'throttle';
-  const isRpm = page === 'rpm';
+  const isSpeed = page === "speed";
+  const isThrottle = page === "throttle";
+  const isRpm = page === "rpm";
   const config = {
-    endpoint: isSpeed ? '/api/curve/speed' : isThrottle ? '/api/curve/throttle' : '/api/curve/rpm',
-    modeName: isSpeed ? 'speed' : isThrottle ? 'throttle' : 'rpm',
-    xLabel: isSpeed ? 'km/h' : isThrottle ? '%' : 'rpm',
+    endpoint: isSpeed ? "/api/curve/speed" : isThrottle ? "/api/curve/throttle" : "/api/curve/rpm",
+    modeName: isSpeed ? "speed" : isThrottle ? "throttle" : "rpm",
+    xLabel: isSpeed ? "km/h" : isThrottle ? "%" : "rpm",
     xMin: 0,
     xMax: isSpeed ? 300 : isThrottle ? 100 : 10000,
     xStep: 1,
-    disengageKey: isSpeed ? 'speed' : isThrottle ? 'throttle' : 'rpm',
-    liveLabel: isSpeed ? 'Speed' : isThrottle ? 'Throttle' : 'RPM',
-    liveKey: isSpeed ? 'speed' : isThrottle ? 'throttle' : 'rpm',
+    disengageKey: isSpeed ? "speed" : isThrottle ? "throttle" : "rpm",
+    liveLabel: isSpeed ? "Speed" : isThrottle ? "Throttle" : "RPM",
+    liveKey: isSpeed ? "speed" : isThrottle ? "throttle" : "rpm",
     defaults: isSpeed
       ? [
           { x: 0, lock: 50 },
@@ -1148,28 +1179,28 @@ function initCurvePage() {
           { x: 140, lock: 0 },
         ]
       : isThrottle
-      ? [
-          { x: 0, lock: 0 },
-          { x: 10, lock: 10 },
-          { x: 25, lock: 25 },
-          { x: 50, lock: 55 },
-          { x: 80, lock: 80 },
-        ]
-      : [
-          { x: 0, lock: 0 },
-          { x: 1000, lock: 10 },
-          { x: 2000, lock: 30 },
-          { x: 3500, lock: 55 },
-          { x: 5000, lock: 80 },
-          { x: 6500, lock: 100 },
-        ],
+        ? [
+            { x: 0, lock: 0 },
+            { x: 10, lock: 10 },
+            { x: 25, lock: 25 },
+            { x: 50, lock: 55 },
+            { x: 80, lock: 80 },
+          ]
+        : [
+            { x: 0, lock: 0 },
+            { x: 1000, lock: 10 },
+            { x: 2000, lock: 30 },
+            { x: 3500, lock: 55 },
+            { x: 5000, lock: 80 },
+            { x: 6500, lock: 100 },
+          ],
   };
 
   const cacheKeys = {
     disengage: `dynamic:disengage:${config.disengageKey}`,
-    throttleGate: 'dynamic:global:disableThrottle',
-    speedGate: 'dynamic:global:disableSpeed',
-    releaseRate: 'dynamic:global:releaseRate',
+    throttleGate: "dynamic:global:disableThrottle",
+    speedGate: "dynamic:global:disableSpeed",
+    releaseRate: "dynamic:global:releaseRate",
   };
 
   let points = config.defaults.map((point) => ({ ...point }));
@@ -1185,16 +1216,24 @@ function initCurvePage() {
 
   const setStatus = (message, pending = false) => {
     statusNode.textContent = message;
-    statusNode.classList.toggle('pending', Boolean(pending));
+    statusNode.classList.toggle("pending", Boolean(pending));
   };
 
   const clampDisengageSpeed = (value) => clampInt(value, 0, 300);
   const clampThrottleGate = (value) => clampInt(value, 0, 100);
   const clampSpeedGate = (value) => clampInt(value, 0, 300);
   const clampReleaseRate = (value) => clampInt(value, 0, 1000);
-  const readToggleChecked = (toggle, fallback = true) => (toggle ? Boolean(toggle.checked) : fallback);
+  const readToggleChecked = (toggle, fallback = true) =>
+    toggle ? Boolean(toggle.checked) : fallback;
 
-  const applySettingFromStatus = ({ apiValue, clamp, input, toggle, cacheKey, fallbackValue = 0 }) => {
+  const applySettingFromStatus = ({
+    apiValue,
+    clamp,
+    input,
+    toggle,
+    cacheKey,
+    fallbackValue = 0,
+  }) => {
     const effectiveApi = clamp(apiValue ?? 0);
     const cached = clamp(getModeBehaviorValue(cacheKey, fallbackValue));
     const enabled = effectiveApi > 0;
@@ -1250,28 +1289,32 @@ function initCurvePage() {
   };
 
   const modeSettingsSummary = (settings) => {
-    const disengageSummary = settings.disengageEnabled && settings.disengageSpeed > 0
-      ? `Disengage below ${settings.disengageSpeed} km/h.`
-      : settings.disengageSpeed > 0
-      ? `Disengage gate off (saved ${settings.disengageSpeed} km/h).`
-      : 'Disengage gate off.';
-    const throttleSummary = settings.disableThrottleEnabled && settings.disableThrottle > 0
-      ? `Throttle >= ${settings.disableThrottle}%.`
-      : settings.disableThrottle > 0
-      ? `Throttle gate off (saved ${settings.disableThrottle}%).`
-      : 'Throttle gate off.';
-    const speedSummary = settings.disableSpeedEnabled && settings.disableSpeed > 0
-      ? `Disable above ${settings.disableSpeed} km/h.`
-      : settings.disableSpeed > 0
-      ? `High-speed gate off (saved ${settings.disableSpeed} km/h).`
-      : 'High-speed gate off.';
-    const releaseSummary = settings.releaseRateEnabled && settings.releaseRate > 0
-      ? `Release ramp ${settings.releaseRate} %/s.`
-      : settings.releaseRate > 0
-      ? `Release ramp off (saved ${settings.releaseRate} %/s).`
-      : 'Release ramp off.';
-    const broadcastSummary = settings.broadcastOpenHaldexOverCAN ? 'Bridge on.' : 'Bridge off.';
-    const controllerSummary = settings.disableController ? 'Controller off.' : 'Controller on.';
+    const disengageSummary =
+      settings.disengageEnabled && settings.disengageSpeed > 0
+        ? `Disengage below ${settings.disengageSpeed} km/h.`
+        : settings.disengageSpeed > 0
+          ? `Disengage gate off (saved ${settings.disengageSpeed} km/h).`
+          : "Disengage gate off.";
+    const throttleSummary =
+      settings.disableThrottleEnabled && settings.disableThrottle > 0
+        ? `Throttle >= ${settings.disableThrottle}%.`
+        : settings.disableThrottle > 0
+          ? `Throttle gate off (saved ${settings.disableThrottle}%).`
+          : "Throttle gate off.";
+    const speedSummary =
+      settings.disableSpeedEnabled && settings.disableSpeed > 0
+        ? `Disable above ${settings.disableSpeed} km/h.`
+        : settings.disableSpeed > 0
+          ? `High-speed gate off (saved ${settings.disableSpeed} km/h).`
+          : "High-speed gate off.";
+    const releaseSummary =
+      settings.releaseRateEnabled && settings.releaseRate > 0
+        ? `Release ramp ${settings.releaseRate} %/s.`
+        : settings.releaseRate > 0
+          ? `Release ramp off (saved ${settings.releaseRate} %/s).`
+          : "Release ramp off.";
+    const broadcastSummary = settings.broadcastOpenHaldexOverCAN ? "Bridge on." : "Bridge off.";
+    const controllerSummary = settings.disableController ? "Controller off." : "Controller on.";
     return `${disengageSummary} ${throttleSummary} ${speedSummary} ${releaseSummary} ${broadcastSummary} ${controllerSummary}`;
   };
 
@@ -1365,15 +1408,15 @@ function initCurvePage() {
   };
 
   const loadModeSettings = async () => {
-    const status = await apiJson('/api/status');
+    const status = await apiJson("/api/status");
     return applyModeSettingsFromStatus(status);
   };
 
   const saveModeSettings = async () => {
     const { payload, state } = readModeSettingsPayload();
-    await apiJson('/api/settings', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    await apiJson("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
     try {
@@ -1403,15 +1446,15 @@ function initCurvePage() {
       .sort((left, right) => left.x - right.x);
 
     if (!normalized.length) {
-      throw new Error('Add at least one point');
+      throw new Error("Add at least one point");
     }
     if (normalized.length > 12) {
-      throw new Error('Max 12 points');
+      throw new Error("Max 12 points");
     }
 
     for (let i = 1; i < normalized.length; i++) {
       if (normalized[i].x <= normalized[i - 1].x) {
-        throw new Error('X values must strictly increase');
+        throw new Error("X values must strictly increase");
       }
     }
     return normalized;
@@ -1422,7 +1465,10 @@ function initCurvePage() {
       return config.xMin;
     }
     const used = new Set(points.map((point) => point.x));
-    let x = Math.min(config.xMax, points[points.length - 1].x + (isSpeed ? 10 : isThrottle ? 5 : 250));
+    let x = Math.min(
+      config.xMax,
+      points[points.length - 1].x + (isSpeed ? 10 : isThrottle ? 5 : 250)
+    );
     while (used.has(x) && x < config.xMax) {
       x += config.xStep;
     }
@@ -1479,14 +1525,14 @@ function initCurvePage() {
   };
 
   const render = () => {
-    rowsNode.innerHTML = points.map((point, index) => rowMarkup(point, index)).join('');
+    rowsNode.innerHTML = points.map((point, index) => rowMarkup(point, index)).join("");
     rowsNode.querySelectorAll('[data-action="remove"]').forEach((button) => {
       button.disabled = points.length <= 1;
     });
   };
 
   const fetchCurve = async () => {
-    setStatus('Loading curve...', true);
+    setStatus("Loading curve...", true);
     const data = await apiJson(config.endpoint);
     const apiPoints = Array.isArray(data?.points) ? data.points : [];
     points = normalizePoints(
@@ -1519,10 +1565,10 @@ function initCurvePage() {
       return;
     }
 
-    setStatus('Saving curve...', true);
+    setStatus("Saving curve...", true);
     await apiJson(config.endpoint, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ points: normalized }),
     });
 
@@ -1536,7 +1582,7 @@ function initCurvePage() {
       return;
     }
     try {
-      const status = await apiJson('/api/status');
+      const status = await apiJson("/api/status");
       const telemetry = status?.telemetry || {};
       const value = telemetry[config.liveKey];
       const formatted = formatValue(value);
@@ -1546,9 +1592,9 @@ function initCurvePage() {
     }
   };
 
-  rowsNode.addEventListener('input', (event) => {
+  rowsNode.addEventListener("input", (event) => {
     const target = event.target;
-    const row = target.closest('.curve-row');
+    const row = target.closest(".curve-row");
     if (!row) {
       return;
     }
@@ -1558,12 +1604,12 @@ function initCurvePage() {
     }
 
     const action = target.dataset.action;
-    if (action === 'x') {
+    if (action === "x") {
       points[index].x = clampInt(target.value, config.xMin, config.xMax);
       target.value = String(points[index].x);
       return;
     }
-    if (action === 'lock-slider') {
+    if (action === "lock-slider") {
       points[index].lock = clampInt(target.value, 0, 100);
       const lockInput = row.querySelector('[data-action="lock-input"]');
       if (lockInput) {
@@ -1571,7 +1617,7 @@ function initCurvePage() {
       }
       return;
     }
-    if (action === 'lock-input') {
+    if (action === "lock-input") {
       points[index].lock = clampInt(target.value, 0, 100);
       target.value = String(points[index].lock);
       const lockSlider = row.querySelector('[data-action="lock-slider"]');
@@ -1581,12 +1627,12 @@ function initCurvePage() {
     }
   });
 
-  rowsNode.addEventListener('click', (event) => {
+  rowsNode.addEventListener("click", (event) => {
     const target = event.target.closest('[data-action="remove"]');
     if (!target) {
       return;
     }
-    const row = target.closest('.curve-row');
+    const row = target.closest(".curve-row");
     if (!row) {
       return;
     }
@@ -1595,39 +1641,39 @@ function initCurvePage() {
       return;
     }
     if (points.length <= 1) {
-      setStatus('At least one point is required.', true);
+      setStatus("At least one point is required.", true);
       return;
     }
     points.splice(index, 1);
     render();
-    setStatus('Point removed.');
+    setStatus("Point removed.");
   });
 
   if (disengageInput) {
-    disengageInput.addEventListener('change', () => {
+    disengageInput.addEventListener("change", () => {
       readDisengageSpeed();
     });
   }
   if (throttleGateInput) {
-    throttleGateInput.addEventListener('change', () => {
+    throttleGateInput.addEventListener("change", () => {
       readThrottleGate();
     });
   }
   if (speedGateInput) {
-    speedGateInput.addEventListener('change', () => {
+    speedGateInput.addEventListener("change", () => {
       readSpeedGate();
     });
   }
   if (releaseRateInput) {
-    releaseRateInput.addEventListener('change', () => {
+    releaseRateInput.addEventListener("change", () => {
       readReleaseRate();
     });
   }
 
   if (btnDisengageSave) {
-    btnDisengageSave.addEventListener('click', async () => {
+    btnDisengageSave.addEventListener("click", async () => {
       try {
-        setStatus('Saving mode settings...', true);
+        setStatus("Saving mode settings...", true);
         const settings = await saveModeSettings();
         setStatus(`Saved mode settings. ${modeSettingsSummary(settings)}`);
       } catch (error) {
@@ -1637,7 +1683,7 @@ function initCurvePage() {
   }
 
   if (btnLoad) {
-    btnLoad.addEventListener('click', async () => {
+    btnLoad.addEventListener("click", async () => {
       try {
         await fetchCurve();
       } catch (error) {
@@ -1647,34 +1693,34 @@ function initCurvePage() {
   }
 
   if (btnAdd) {
-    btnAdd.addEventListener('click', () => {
+    btnAdd.addEventListener("click", () => {
       if (points.length >= 12) {
-        setStatus('Max 12 points reached.', true);
+        setStatus("Max 12 points reached.", true);
         return;
       }
       const x = getNextPointX();
       if (x < 0) {
-        setStatus('No available x slot left.', true);
+        setStatus("No available x slot left.", true);
         return;
       }
       const lock = points.length ? points[points.length - 1].lock : 0;
       points.push({ x, lock });
       points = points.sort((left, right) => left.x - right.x);
       render();
-      setStatus('Point added.');
+      setStatus("Point added.");
     });
   }
 
   if (btnReset) {
-    btnReset.addEventListener('click', () => {
+    btnReset.addEventListener("click", () => {
       points = config.defaults.map((point) => ({ ...point }));
       render();
-      setStatus('Defaults loaded locally. Save to apply.');
+      setStatus("Defaults loaded locally. Save to apply.");
     });
   }
 
   if (btnSave) {
-    btnSave.addEventListener('click', async () => {
+    btnSave.addEventListener("click", async () => {
       try {
         await saveCurve();
       } catch (error) {
@@ -1689,7 +1735,7 @@ function initCurvePage() {
   });
   updateLiveValue();
   pollTimer = window.setInterval(updateLiveValue, 1000);
-  window.addEventListener('beforeunload', () => {
+  window.addEventListener("beforeunload", () => {
     if (pollTimer) {
       window.clearInterval(pollTimer);
     }
@@ -1697,33 +1743,33 @@ function initCurvePage() {
 }
 
 function initLogsPage() {
-  const output = document.getElementById('logOutput');
+  const output = document.getElementById("logOutput");
   if (!output) {
     return;
   }
 
-  const logStatus = document.getElementById('logStatus');
-  const logSettingsStatus = document.getElementById('logSettingsStatus');
-  const logFileStatus = document.getElementById('logFileStatus');
-  const masterToggle = document.getElementById('logEnableMaster');
-  const canToggle = document.getElementById('logEnableCan');
-  const errorToggle = document.getElementById('logEnableError');
-  const serialToggle = document.getElementById('logEnableSerial');
-  const firmwareToggle = document.getElementById('logDebugFirmware');
-  const networkToggle = document.getElementById('logDebugNetwork');
-  const canDebugToggle = document.getElementById('logDebugCan');
-  const fileSelect = document.getElementById('logFileSelect');
-  const scopeSelect = document.getElementById('logScopeSelect');
-  const btnApply = document.getElementById('btnLogApply');
-  const btnPause = document.getElementById('btnLogPause');
-  const btnClearView = document.getElementById('btnLogClear');
-  const btnDownload = document.getElementById('btnLogDownload');
-  const btnRefreshList = document.getElementById('btnLogRefreshList');
-  const btnDelete = document.getElementById('btnLogDelete');
-  const btnClearScope = document.getElementById('btnLogClearScope');
+  const logStatus = document.getElementById("logStatus");
+  const logSettingsStatus = document.getElementById("logSettingsStatus");
+  const logFileStatus = document.getElementById("logFileStatus");
+  const masterToggle = document.getElementById("logEnableMaster");
+  const canToggle = document.getElementById("logEnableCan");
+  const errorToggle = document.getElementById("logEnableError");
+  const serialToggle = document.getElementById("logEnableSerial");
+  const firmwareToggle = document.getElementById("logDebugFirmware");
+  const networkToggle = document.getElementById("logDebugNetwork");
+  const canDebugToggle = document.getElementById("logDebugCan");
+  const fileSelect = document.getElementById("logFileSelect");
+  const scopeSelect = document.getElementById("logScopeSelect");
+  const btnApply = document.getElementById("btnLogApply");
+  const btnPause = document.getElementById("btnLogPause");
+  const btnClearView = document.getElementById("btnLogClear");
+  const btnDownload = document.getElementById("btnLogDownload");
+  const btnRefreshList = document.getElementById("btnLogRefreshList");
+  const btnDelete = document.getElementById("btnLogDelete");
+  const btnClearScope = document.getElementById("btnLogClearScope");
 
   let paused = false;
-  let activePath = '';
+  let activePath = "";
   let polling = false;
   let pollTimer = null;
   let pollCount = 0;
@@ -1747,12 +1793,20 @@ function initLogsPage() {
   }
 
   function logNameFromPath(path) {
-    const value = String(path || '');
-    return value.split('/').pop() || value;
+    const value = String(path || "");
+    return value.split("/").pop() || value;
   }
 
   function syncToggleState() {
-    if (!masterToggle || !canToggle || !errorToggle || !serialToggle || !firmwareToggle || !networkToggle || !canDebugToggle) {
+    if (
+      !masterToggle ||
+      !canToggle ||
+      !errorToggle ||
+      !serialToggle ||
+      !firmwareToggle ||
+      !networkToggle ||
+      !canDebugToggle
+    ) {
       return;
     }
     const on = Boolean(masterToggle.checked);
@@ -1765,12 +1819,20 @@ function initLogsPage() {
   }
 
   async function refreshSettings() {
-    if (!masterToggle || !canToggle || !errorToggle || !serialToggle || !firmwareToggle || !networkToggle || !canDebugToggle) {
+    if (
+      !masterToggle ||
+      !canToggle ||
+      !errorToggle ||
+      !serialToggle ||
+      !firmwareToggle ||
+      !networkToggle ||
+      !canDebugToggle
+    ) {
       return;
     }
-    setSettingsStatus('Loading...');
+    setSettingsStatus("Loading...");
     try {
-      const status = await apiJson('/api/status');
+      const status = await apiJson("/api/status");
       const logging = status.logging || {};
       masterToggle.checked = Boolean(logging.masterEnabled);
       canToggle.checked = Boolean(logging.canEnabled);
@@ -1780,17 +1842,27 @@ function initLogsPage() {
       networkToggle.checked = Boolean(logging.debugNetworkEnabled);
       canDebugToggle.checked = Boolean(logging.debugCanEnabled);
       syncToggleState();
-      setSettingsStatus(logging.debugCaptureActive ? 'Loaded (debug capture active: STOCK mode forced)' : 'Loaded');
+      setSettingsStatus(
+        logging.debugCaptureActive ? "Loaded (debug capture active: STOCK mode forced)" : "Loaded"
+      );
     } catch (error) {
       setSettingsStatus(`Load failed: ${error.message}`);
     }
   }
 
   async function applySettings() {
-    if (!masterToggle || !canToggle || !errorToggle || !serialToggle || !firmwareToggle || !networkToggle || !canDebugToggle) {
+    if (
+      !masterToggle ||
+      !canToggle ||
+      !errorToggle ||
+      !serialToggle ||
+      !firmwareToggle ||
+      !networkToggle ||
+      !canDebugToggle
+    ) {
       return;
     }
-    setSettingsStatus('Saving...');
+    setSettingsStatus("Saving...");
     try {
       const master = Boolean(masterToggle.checked);
       const payload = master
@@ -1813,9 +1885,9 @@ function initLogsPage() {
             logDebugCanEnabled: false,
           };
 
-      const response = await apiJson('/api/settings', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      const response = await apiJson("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
       if (!master) {
@@ -1828,44 +1900,44 @@ function initLogsPage() {
       }
       syncToggleState();
       const forcedStock = Boolean(response?.debugCaptureActive);
-      setSettingsStatus(forcedStock ? 'Saved (debug capture active: STOCK mode forced)' : 'Saved');
+      setSettingsStatus(forcedStock ? "Saved (debug capture active: STOCK mode forced)" : "Saved");
     } catch (error) {
       setSettingsStatus(`Save failed: ${error.message}`);
     }
   }
 
-  async function refreshFileList(preferredPath = '') {
+  async function refreshFileList(preferredPath = "") {
     if (!fileSelect) {
       return;
     }
 
-    const previous = preferredPath || activePath || fileSelect.value || '';
-    setFileStatus('Loading...');
+    const previous = preferredPath || activePath || fileSelect.value || "";
+    setFileStatus("Loading...");
 
     try {
-      const data = await apiJson('/api/logs');
+      const data = await apiJson("/api/logs");
       const files = Array.isArray(data.files) ? data.files.slice() : [];
-      files.sort((a, b) => String(a.path || '').localeCompare(String(b.path || '')));
+      files.sort((a, b) => String(a.path || "").localeCompare(String(b.path || "")));
 
-      fileSelect.innerHTML = '';
+      fileSelect.innerHTML = "";
 
       if (!files.length) {
-        const placeholder = document.createElement('option');
-        placeholder.value = '';
-        placeholder.textContent = 'No .txt log files yet';
+        const placeholder = document.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "No .txt log files yet";
         fileSelect.appendChild(placeholder);
         fileSelect.disabled = true;
-        activePath = '';
-        output.textContent = 'No logs yet. Enable log capture, drive briefly, then refresh.';
-        setFileStatus('No .txt log files yet');
+        activePath = "";
+        output.textContent = "No logs yet. Enable log capture, drive briefly, then refresh.";
+        setFileStatus("No .txt log files yet");
         return;
       }
 
       files.forEach((entry) => {
-        const option = document.createElement('option');
-        option.value = entry.path || '';
-        const name = logNameFromPath(entry.path || '');
-        option.textContent = `${name} (${entry.scope || 'log'}, ${formatBytes(entry.size)})`;
+        const option = document.createElement("option");
+        option.value = entry.path || "";
+        const name = logNameFromPath(entry.path || "");
+        option.textContent = `${name} (${entry.scope || "log"}, ${formatBytes(entry.size)})`;
         fileSelect.appendChild(option);
       });
 
@@ -1881,30 +1953,30 @@ function initLogsPage() {
 
   async function loadActiveFile() {
     if (!activePath) {
-      output.textContent = 'No logs available yet.';
-      setStatus('Idle');
+      output.textContent = "No logs available yet.";
+      setStatus("Idle");
       return;
     }
     try {
       const text = await apiText(`/api/logs/read?path=${encodeURIComponent(activePath)}&max=65536`);
       const trimmed = String(text || "").trim();
-      if (trimmed.startsWith("{") && trimmed.includes("\"files\"")) {
+      if (trimmed.startsWith("{") && trimmed.includes('"files"')) {
         setStatus("Read endpoint returned file-list JSON; refreshing...");
         await refreshFileList(activePath);
         return;
       }
-      output.textContent = text || '[empty file]';
+      output.textContent = text || "[empty file]";
       if (!paused) {
         output.scrollTop = output.scrollHeight;
       }
       setStatus(`Streaming ${new Date().toLocaleTimeString()}`);
     } catch (error) {
-      const msg = String(error?.message || 'read failed');
-      if (msg.includes('404') || msg.includes('log read failed')) {
-        await refreshFileList('');
+      const msg = String(error?.message || "read failed");
+      if (msg.includes("404") || msg.includes("log read failed")) {
+        await refreshFileList("");
         if (!activePath) {
-          output.textContent = 'No logs yet. Enable log capture, drive briefly, then refresh.';
-          setStatus('Idle');
+          output.textContent = "No logs yet. Enable log capture, drive briefly, then refresh.";
+          setStatus("Idle");
           return;
         }
       }
@@ -1916,16 +1988,16 @@ function initLogsPage() {
     if (!activePath) {
       return;
     }
-    setFileStatus('Deleting...');
+    setFileStatus("Deleting...");
     try {
-      await apiJson('/api/logs/delete', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await apiJson("/api/logs/delete", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ path: activePath }),
       });
-      await refreshFileList('');
+      await refreshFileList("");
       await loadActiveFile();
-      setFileStatus('Deleted');
+      setFileStatus("Deleted");
     } catch (error) {
       setFileStatus(`Delete failed: ${error.message}`);
     }
@@ -1935,17 +2007,17 @@ function initLogsPage() {
     if (!scopeSelect) {
       return;
     }
-    const scope = scopeSelect.value || 'everything';
-    setFileStatus('Clearing...');
+    const scope = scopeSelect.value || "everything";
+    setFileStatus("Clearing...");
     try {
-      await apiJson('/api/logs/clear', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+      await apiJson("/api/logs/clear", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ scope }),
       });
-      await refreshFileList('');
+      await refreshFileList("");
       await loadActiveFile();
-      setFileStatus('Cleared');
+      setFileStatus("Cleared");
     } catch (error) {
       setFileStatus(`Clear failed: ${error.message}`);
     }
@@ -1954,27 +2026,27 @@ function initLogsPage() {
   function togglePause() {
     paused = !paused;
     if (btnPause) {
-      btnPause.textContent = paused ? 'Resume' : 'Pause';
+      btnPause.textContent = paused ? "Resume" : "Pause";
     }
-    setStatus(paused ? 'Paused' : 'Streaming');
+    setStatus(paused ? "Paused" : "Streaming");
     if (!paused) {
       loadActiveFile();
     }
   }
 
   function clearView() {
-    output.textContent = '';
-    setStatus(paused ? 'Paused' : 'View cleared');
+    output.textContent = "";
+    setStatus(paused ? "Paused" : "View cleared");
   }
 
   function downloadView() {
-    const body = output.textContent || '';
-    const blob = new Blob([body], { type: 'text/plain;charset=utf-8' });
+    const body = output.textContent || "";
+    const blob = new Blob([body], { type: "text/plain;charset=utf-8" });
     const url = URL.createObjectURL(blob);
-    const link = document.createElement('a');
-    const name = activePath ? activePath.split('/').pop() : 'openhaldex-log.txt';
+    const link = document.createElement("a");
+    const name = activePath ? activePath.split("/").pop() : "openhaldex-log.txt";
     link.href = url;
-    link.download = sanitizeFilename(name || 'openhaldex-log.txt');
+    link.download = sanitizeFilename(name || "openhaldex-log.txt");
     document.body.appendChild(link);
     link.click();
     link.remove();
@@ -1998,43 +2070,43 @@ function initLogsPage() {
   }
 
   if (btnApply) {
-    btnApply.addEventListener('click', applySettings);
+    btnApply.addEventListener("click", applySettings);
   }
   if (masterToggle) {
-    masterToggle.addEventListener('change', syncToggleState);
+    masterToggle.addEventListener("change", syncToggleState);
   }
   if (fileSelect) {
-    fileSelect.addEventListener('change', () => {
-      activePath = fileSelect.value || '';
+    fileSelect.addEventListener("change", () => {
+      activePath = fileSelect.value || "";
       loadActiveFile();
     });
   }
   if (btnRefreshList) {
-    btnRefreshList.addEventListener('click', async () => {
+    btnRefreshList.addEventListener("click", async () => {
       await refreshFileList(activePath);
       await loadActiveFile();
     });
   }
   if (btnDelete) {
-    btnDelete.addEventListener('click', deleteActiveFile);
+    btnDelete.addEventListener("click", deleteActiveFile);
   }
   if (btnClearScope) {
-    btnClearScope.addEventListener('click', clearScope);
+    btnClearScope.addEventListener("click", clearScope);
   }
   if (btnPause) {
-    btnPause.addEventListener('click', togglePause);
+    btnPause.addEventListener("click", togglePause);
   }
   if (btnClearView) {
-    btnClearView.addEventListener('click', clearView);
+    btnClearView.addEventListener("click", clearView);
   }
   if (btnDownload) {
-    btnDownload.addEventListener('click', downloadView);
+    btnDownload.addEventListener("click", downloadView);
   }
 
   refreshSettings();
-  refreshFileList('').then(loadActiveFile);
+  refreshFileList("").then(loadActiveFile);
   pollTimer = window.setInterval(poll, 3000);
-  window.addEventListener('beforeunload', () => {
+  window.addEventListener("beforeunload", () => {
     if (pollTimer) {
       window.clearInterval(pollTimer);
     }
@@ -2046,13 +2118,13 @@ function getPageKey() {
   if (page) {
     return page;
   }
-  if (document.querySelector('.logs-main')) {
-    return 'logs';
+  if (document.querySelector(".logs-main")) {
+    return "logs";
   }
-  return 'default';
+  return "default";
 }
 
-const MODE_BEHAVIOR_CACHE_KEY = 'ohModeBehaviorValues:v1';
+const MODE_BEHAVIOR_CACHE_KEY = "ohModeBehaviorValues:v1";
 
 function readModeBehaviorCache() {
   try {
@@ -2061,7 +2133,7 @@ function readModeBehaviorCache() {
       return {};
     }
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== 'object') {
+    if (!parsed || typeof parsed !== "object") {
       return {};
     }
     return parsed;
@@ -2097,7 +2169,7 @@ function setModeBehaviorValue(cacheKey, value) {
 
 function initDetailsPersistence() {
   const pageKey = getPageKey();
-  const details = document.querySelectorAll('details[data-detail]');
+  const details = document.querySelectorAll("details[data-detail]");
   details.forEach((item) => {
     const detailId = item.dataset.detail;
     if (!detailId) {
@@ -2106,17 +2178,17 @@ function initDetailsPersistence() {
     const storageKey = `ohDetails:${pageKey}:${detailId}`;
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved === 'open') {
+      if (saved === "open") {
         item.open = true;
-      } else if (saved === 'closed') {
+      } else if (saved === "closed") {
         item.open = false;
       }
     } catch {
       // Ignore storage failures.
     }
-    item.addEventListener('toggle', () => {
+    item.addEventListener("toggle", () => {
       try {
-        localStorage.setItem(storageKey, item.open ? 'open' : 'closed');
+        localStorage.setItem(storageKey, item.open ? "open" : "closed");
       } catch {
         // Ignore storage failures.
       }
@@ -2127,14 +2199,14 @@ function initDetailsPersistence() {
 function initCollapsibleCards() {
   const pageKey = getPageKey();
   const targets = [];
-  if (document.querySelector('.canview-main')) {
-    targets.push('.canview-main');
+  if (document.querySelector(".canview-main")) {
+    targets.push(".canview-main");
   }
-  if (document.querySelector('.diag-main')) {
-    targets.push('.diag-main');
+  if (document.querySelector(".diag-main")) {
+    targets.push(".diag-main");
   }
-  if (document.querySelector('.logs-main')) {
-    targets.push('.logs-main');
+  if (document.querySelector(".logs-main")) {
+    targets.push(".logs-main");
   }
   if (!targets.length) {
     return;
@@ -2144,48 +2216,49 @@ function initCollapsibleCards() {
     document.querySelectorAll(`${selector} .ui-card`).forEach((card) => cards.push(card));
   });
   cards.forEach((card, index) => {
-    const header = card.querySelector('.ui-section-head');
+    const header = card.querySelector(".ui-section-head");
     if (!header) {
       return;
     }
     const title =
-      header.querySelector('h2')?.textContent?.trim() ||
+      header.querySelector("h2")?.textContent?.trim() ||
       header.textContent?.trim() ||
       `card-${index}`;
-    const slug = title
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || `card-${index}`;
+    const slug =
+      title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, "-")
+        .replace(/^-+|-+$/g, "") || `card-${index}`;
     const storageKey = `ohCard:${pageKey}:${slug}`;
-    card.classList.add('collapsible');
+    card.classList.add("collapsible");
 
     let collapsed = true;
     try {
       const saved = localStorage.getItem(storageKey);
-      if (saved === 'open') {
+      if (saved === "open") {
         collapsed = false;
-      } else if (saved === 'collapsed') {
+      } else if (saved === "collapsed") {
         collapsed = true;
       }
     } catch {
       // Ignore storage failures.
     }
-    card.classList.toggle('is-collapsed', collapsed);
+    card.classList.toggle("is-collapsed", collapsed);
 
-    header.setAttribute('role', 'button');
+    header.setAttribute("role", "button");
     header.tabIndex = 0;
     const toggle = () => {
-      const next = !card.classList.contains('is-collapsed');
-      card.classList.toggle('is-collapsed', next);
+      const next = !card.classList.contains("is-collapsed");
+      card.classList.toggle("is-collapsed", next);
       try {
-        localStorage.setItem(storageKey, next ? 'collapsed' : 'open');
+        localStorage.setItem(storageKey, next ? "collapsed" : "open");
       } catch {
         // Ignore storage failures.
       }
     };
-    header.addEventListener('click', toggle);
-    header.addEventListener('keydown', (event) => {
-      if (event.key === 'Enter' || event.key === ' ') {
+    header.addEventListener("click", toggle);
+    header.addEventListener("keydown", (event) => {
+      if (event.key === "Enter" || event.key === " ") {
         event.preventDefault();
         toggle();
       }
@@ -2194,28 +2267,28 @@ function initCollapsibleCards() {
 }
 
 if (menuToggle) {
-  menuToggle.addEventListener('click', () => {
-    const isOpen = !slideMenu?.classList.contains('active');
+  menuToggle.addEventListener("click", () => {
+    const isOpen = !slideMenu?.classList.contains("active");
     setMenuState(Boolean(isOpen));
   });
 }
 
 if (menuClose) {
-  menuClose.addEventListener('click', () => {
+  menuClose.addEventListener("click", () => {
     setMenuState(false);
   });
 }
 
 if (menuBackdrop) {
-  menuBackdrop.addEventListener('click', () => {
+  menuBackdrop.addEventListener("click", () => {
     setMenuState(false);
   });
 }
 
 menuItems.forEach((item) => {
-  item.addEventListener('click', (event) => {
-    const href = item.getAttribute('href') || '';
-    if (href.startsWith('#')) {
+  item.addEventListener("click", (event) => {
+    const href = item.getAttribute("href") || "";
+    if (href.startsWith("#")) {
       event.preventDefault();
     }
     setMenuState(false);
@@ -2223,14 +2296,14 @@ menuItems.forEach((item) => {
 });
 
 if (themeToggle) {
-  themeToggle.addEventListener('click', toggleTheme);
+  themeToggle.addEventListener("click", toggleTheme);
 }
 
 if (fullscreenToggle) {
-  fullscreenToggle.addEventListener('click', () => {
+  fullscreenToggle.addEventListener("click", () => {
     if (!document.fullscreenElement) {
       document.documentElement.requestFullscreen().catch((err) => {
-        console.log('Fullscreen request failed:', err);
+        console.log("Fullscreen request failed:", err);
       });
     } else {
       document.exitFullscreen();
@@ -2238,15 +2311,15 @@ if (fullscreenToggle) {
   });
 }
 
-document.addEventListener('fullscreenchange', updateFullscreenLabel);
+document.addEventListener("fullscreenchange", updateFullscreenLabel);
 
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && slideMenu?.classList.contains('active')) {
+document.addEventListener("keydown", (event) => {
+  if (event.key === "Escape" && slideMenu?.classList.contains("active")) {
     setMenuState(false);
   }
 });
 
-document.addEventListener('keydown', (event) => {
+document.addEventListener("keydown", (event) => {
   if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) {
     return;
   }
@@ -2255,13 +2328,13 @@ document.addEventListener('keydown', (event) => {
     return;
   }
 
-  if (event.key.toLowerCase() === 't') {
+  if (event.key.toLowerCase() === "t") {
     toggleTheme();
   }
 });
 
 buttons.forEach((button) => {
-  button.addEventListener('click', async () => {
+  button.addEventListener("click", async () => {
     setMode(button);
     try {
       await pushHomeMode(button);
@@ -2272,9 +2345,9 @@ buttons.forEach((button) => {
 });
 
 if (ratioSlider && frontNumber && rearNumber && ratioLine) {
-  ratioSlider.addEventListener('input', (event) => {
-    const active = document.querySelector('.btn-circle.active');
-    if (!active || String(active.dataset.mode || '').toLowerCase() !== 'lock') {
+  ratioSlider.addEventListener("input", (event) => {
+    const active = document.querySelector(".btn-circle.active");
+    if (!active || String(active.dataset.mode || "").toLowerCase() !== "lock") {
       return;
     }
     const target = event.target;
@@ -2288,9 +2361,9 @@ if (ratioSlider && frontNumber && rearNumber && ratioLine) {
     updateRatioProgress(rear);
   });
 
-  ratioSlider.addEventListener('change', async () => {
-    const active = document.querySelector('.btn-circle.active');
-    if (!active || String(active.dataset.mode || '').toLowerCase() !== 'lock') {
+  ratioSlider.addEventListener("change", async () => {
+    const active = document.querySelector(".btn-circle.active");
+    if (!active || String(active.dataset.mode || "").toLowerCase() !== "lock") {
       return;
     }
     try {
@@ -2302,30 +2375,29 @@ if (ratioSlider && frontNumber && rearNumber && ratioLine) {
 }
 
 const savedTheme = getStoredTheme();
-const initialTheme = savedTheme || document.body.dataset.theme || 'dark';
+const initialTheme = savedTheme || document.body.dataset.theme || "dark";
 applyTheme(initialTheme);
 storeTheme(initialTheme);
 
 updateThemeToggleLabel();
 updateFullscreenLabel();
 
-const activeModeButton = document.querySelector('.btn-circle.active') || buttons[0];
+const activeModeButton = document.querySelector(".btn-circle.active") || buttons[0];
 if (activeModeButton) {
   setMode(activeModeButton);
 }
 
-const pageName = String(document.body?.dataset?.page || '').toLowerCase();
+const pageName = String(document.body?.dataset?.page || "").toLowerCase();
 initHomeTelemetry();
 initCurvePage();
-if (pageName === 'map' && typeof initMapPage === 'function') initMapPage();
-if (pageName === 'canview' && typeof initCanviewPage === 'function') initCanviewPage();
-if (pageName === 'diag' && typeof initDiagPage === 'function') initDiagPage();
-if (pageName === 'ota' && typeof initOtaPage === 'function') initOtaPage();
+if (pageName === "map" && typeof initMapPage === "function") initMapPage();
+if (pageName === "canview" && typeof initCanviewPage === "function") initCanviewPage();
+if (pageName === "diag" && typeof initDiagPage === "function") initDiagPage();
+if (pageName === "ota" && typeof initOtaPage === "function") initOtaPage();
 initSetupPage();
 initLogsPage();
 initDetailsPersistence();
 initCollapsibleCards();
-
 
 // Merged from pages-legacy.js to keep ui-dev on a single app.js file.
 // OpenHaldex-S3 ui-dev page controllers (ported from data/scripts.js)
@@ -2407,22 +2479,29 @@ function initMapPage() {
   }
 
   function mapNameFromPath(path) {
-    const value = String(path || '');
-    const base = value.split('/').pop() || value;
-    return base.replace(/\.(txt|json)$/i, '');
+    const value = String(path || "");
+    const base = value.split("/").pop() || value;
+    return base.replace(/\.(txt|json)$/i, "");
   }
 
   function mapLabel(entry) {
-    const explicit = String(entry?.name || '').trim();
+    const explicit = String(entry?.name || "").trim();
     if (explicit) return mapNameFromPath(explicit) || explicit;
-    return mapNameFromPath(entry?.path || '') || 'map';
+    return mapNameFromPath(entry?.path || "") || "map";
   }
 
   function readToggleChecked(toggle, fallback = true) {
     return toggle ? Boolean(toggle.checked) : fallback;
   }
 
-  function applyMapSettingFromStatus({ apiValue, clampMax, input, toggle, cacheKey, fallbackValue = 0 }) {
+  function applyMapSettingFromStatus({
+    apiValue,
+    clampMax,
+    input,
+    toggle,
+    cacheKey,
+    fallbackValue = 0,
+  }) {
     const fromApi = clamp(toInt(apiValue, 0), 0, clampMax);
     const cached = clamp(getModeBehaviorValue(cacheKey, fallbackValue), 0, clampMax);
     const enabled = fromApi > 0;
@@ -2493,26 +2572,30 @@ function initMapPage() {
     setModeBehaviorValue(mapBehaviorCacheKeys.releaseRate, sanitized);
   }
   function summarizeMapModeSettings(settings) {
-    const disengage = settings.disengageEnabled && settings.disengage > 0
-      ? `Disengage below ${settings.disengage} km/h.`
-      : settings.disengage > 0
-      ? `Disengage gate off (saved ${settings.disengage} km/h).`
-      : "Disengage gate off.";
-    const throttleGate = settings.disableThrottleEnabled && settings.disableThrottle > 0
-      ? `Throttle >= ${settings.disableThrottle}%.`
-      : settings.disableThrottle > 0
-      ? `Throttle gate off (saved ${settings.disableThrottle}%).`
-      : "Throttle gate off.";
-    const speedGate = settings.disableSpeedEnabled && settings.disableSpeed > 0
-      ? `Disable above ${settings.disableSpeed} km/h.`
-      : settings.disableSpeed > 0
-      ? `High-speed gate off (saved ${settings.disableSpeed} km/h).`
-      : "High-speed gate off.";
-    const releaseRate = settings.releaseRateEnabled && settings.releaseRate > 0
-      ? `Release ramp ${settings.releaseRate} %/s.`
-      : settings.releaseRate > 0
-      ? `Release ramp off (saved ${settings.releaseRate} %/s).`
-      : "Release ramp off.";
+    const disengage =
+      settings.disengageEnabled && settings.disengage > 0
+        ? `Disengage below ${settings.disengage} km/h.`
+        : settings.disengage > 0
+          ? `Disengage gate off (saved ${settings.disengage} km/h).`
+          : "Disengage gate off.";
+    const throttleGate =
+      settings.disableThrottleEnabled && settings.disableThrottle > 0
+        ? `Throttle >= ${settings.disableThrottle}%.`
+        : settings.disableThrottle > 0
+          ? `Throttle gate off (saved ${settings.disableThrottle}%).`
+          : "Throttle gate off.";
+    const speedGate =
+      settings.disableSpeedEnabled && settings.disableSpeed > 0
+        ? `Disable above ${settings.disableSpeed} km/h.`
+        : settings.disableSpeed > 0
+          ? `High-speed gate off (saved ${settings.disableSpeed} km/h).`
+          : "High-speed gate off.";
+    const releaseRate =
+      settings.releaseRateEnabled && settings.releaseRate > 0
+        ? `Release ramp ${settings.releaseRate} %/s.`
+        : settings.releaseRate > 0
+          ? `Release ramp off (saved ${settings.releaseRate} %/s).`
+          : "Release ramp off.";
     const broadcast = settings.broadcastOpenHaldexOverCAN ? "Bridge on." : "Bridge off.";
     const controller = settings.disableController ? "Controller off." : "Controller on.";
     return `${disengage} ${throttleGate} ${speedGate} ${releaseRate} ${broadcast} ${controller}`;
@@ -2551,8 +2634,10 @@ function initMapPage() {
       cacheKey: mapBehaviorCacheKeys.releaseRate,
       fallbackValue: 120,
     });
-    if (mapBroadcastToggle) mapBroadcastToggle.checked = !data || data.broadcastOpenHaldexOverCAN !== false;
-    if (mapControllerToggle) mapControllerToggle.checked = !data || !Boolean(data.disableController);
+    if (mapBroadcastToggle)
+      mapBroadcastToggle.checked = !data || data.broadcastOpenHaldexOverCAN !== false;
+    if (mapControllerToggle)
+      mapControllerToggle.checked = !data || !Boolean(data.disableController);
     return {
       disengage: disengage.value,
       disengageEnabled: disengage.enabled,
@@ -2652,7 +2737,8 @@ function initMapPage() {
   function applyCellColor(cell, value) {
     if (!cell) return;
     const v = Math.max(0, Math.min(100, parseInt(value || 0, 10)));
-    const isLight = document.body && document.body.dataset && document.body.dataset.theme === "light";
+    const isLight =
+      document.body && document.body.dataset && document.body.dataset.theme === "light";
     const styles = window.getComputedStyle(document.body);
     const brandRgb = (styles.getPropertyValue("--brand-rgb") || "").trim();
     const textColor = (styles.getPropertyValue("--text") || "").trim();
@@ -3587,10 +3673,14 @@ function initOtaPage() {
           : "No saved hotspot";
       }
       if (wifiApStatus) {
-        wifiApStatus.textContent = data.apPasswordSet ? "AP password is set" : "AP is open (no password)";
+        wifiApStatus.textContent = data.apPasswordSet
+          ? "AP password is set"
+          : "AP is open (no password)";
       }
       if (wifiStatus) {
-        wifiStatus.textContent = data.ssid ? `Saved SSID: ${data.ssid} | ${apMode}` : `No saved hotspot | ${apMode}`;
+        wifiStatus.textContent = data.ssid
+          ? `Saved SSID: ${data.ssid} | ${apMode}`
+          : `No saved hotspot | ${apMode}`;
       }
     } catch (e) {
       if (wifiStaStatus) wifiStaStatus.textContent = "STA fetch failed: " + e.message;
@@ -3780,4 +3870,3 @@ function initOtaPage() {
   refreshUpdate();
   setInterval(refreshUpdate, 2000);
 }
-

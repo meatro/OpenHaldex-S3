@@ -1,6 +1,6 @@
 {
-  "version": "openhaldex-s3-v0.6.0-beta",
-  "notes": "Internal test build",
+  "version": "openhaldex-s3-v0.9.0-beta",
+  "notes": "Beta build",
   "firmware": "firmware.bin",
   "filesystem": "littlefs.bin"
 }

@@ -38,52 +38,50 @@ bool filelogShouldSerialEmit(const char* level, const char* tag);
 
 // Debug helpers
 #if enableDebug
-#define DEBUG(x, ...)                                                                                                 \
-  do {                                                                                                                \
-    if (filelogShouldSerialEmit("DEBUG", "debug")) {                                                                 \
-      Serial.printf(x "\n", ##__VA_ARGS__);                                                                          \
-    }                                                                                                                 \
-    filelogPrintf("DEBUG", "debug", x, ##__VA_ARGS__);                                                               \
+#define DEBUG(x, ...)                                                                                                  \
+  do {                                                                                                                 \
+    if (filelogShouldSerialEmit("DEBUG", "debug")) {                                                                   \
+      Serial.printf(x "\n", ##__VA_ARGS__);                                                                            \
+    }                                                                                                                  \
+    filelogPrintf("DEBUG", "debug", x, ##__VA_ARGS__);                                                                 \
   } while (0)
-#define DEBUG_(x, ...)                                                                                                \
-  do {                                                                                                                \
-    if (filelogShouldSerialEmit("DEBUG", "debug")) {                                                                 \
-      Serial.printf(x, ##__VA_ARGS__);                                                                               \
-    }                                                                                                                 \
-    filelogPrintf("DEBUG", "debug", x, ##__VA_ARGS__);                                                               \
+#define DEBUG_(x, ...)                                                                                                 \
+  do {                                                                                                                 \
+    if (filelogShouldSerialEmit("DEBUG", "debug")) {                                                                   \
+      Serial.printf(x, ##__VA_ARGS__);                                                                                 \
+    }                                                                                                                  \
+    filelogPrintf("DEBUG", "debug", x, ##__VA_ARGS__);                                                                 \
   } while (0)
 #else
 #define DEBUG(x, ...)
 #define DEBUG_(x, ...)
 #endif
 
-#define LOG_INFO(tag, x, ...)                                                                                         \
-  do {                                                                                                                \
-    if (filelogShouldSerialEmit("INFO", tag)) {                                                                       \
-      Serial.printf("[INFO][%s] " x "\n", tag, ##__VA_ARGS__);                                                       \
-    }                                                                                                                 \
-    filelogPrintf("INFO", tag, x, ##__VA_ARGS__);                                                                    \
+#define LOG_INFO(tag, x, ...)                                                                                          \
+  do {                                                                                                                 \
+    if (filelogShouldSerialEmit("INFO", tag)) {                                                                        \
+      Serial.printf("[INFO][%s] " x "\n", tag, ##__VA_ARGS__);                                                         \
+    }                                                                                                                  \
+    filelogPrintf("INFO", tag, x, ##__VA_ARGS__);                                                                      \
   } while (0)
 
-#define LOG_WARN(tag, x, ...)                                                                                         \
-  do {                                                                                                                \
-    if (filelogShouldSerialEmit("WARN", tag)) {                                                                       \
-      Serial.printf("[WARN][%s] " x "\n", tag, ##__VA_ARGS__);                                                       \
-    }                                                                                                                 \
-    filelogPrintf("WARN", tag, x, ##__VA_ARGS__);                                                                    \
+#define LOG_WARN(tag, x, ...)                                                                                          \
+  do {                                                                                                                 \
+    if (filelogShouldSerialEmit("WARN", tag)) {                                                                        \
+      Serial.printf("[WARN][%s] " x "\n", tag, ##__VA_ARGS__);                                                         \
+    }                                                                                                                  \
+    filelogPrintf("WARN", tag, x, ##__VA_ARGS__);                                                                      \
   } while (0)
 
-#define LOG_ERROR(tag, x, ...)                                                                                        \
-  do {                                                                                                                \
-    if (filelogShouldSerialEmit("ERROR", tag)) {                                                                      \
-      Serial.printf("[ERROR][%s] " x "\n", tag, ##__VA_ARGS__);                                                      \
-    }                                                                                                                 \
-    filelogPrintf("ERROR", tag, x, ##__VA_ARGS__);                                                                   \
+#define LOG_ERROR(tag, x, ...)                                                                                         \
+  do {                                                                                                                 \
+    if (filelogShouldSerialEmit("ERROR", tag)) {                                                                       \
+      Serial.printf("[ERROR][%s] " x "\n", tag, ##__VA_ARGS__);                                                        \
+    }                                                                                                                  \
+    filelogPrintf("ERROR", tag, x, ##__VA_ARGS__);                                                                     \
   } while (0)
 
 #define BYTE_TO_BINARY_PATTERN "%c%c%c%c%c%c%c%c"
 #define BYTE_TO_BINARY(byte)                                                                                           \
   ((byte) & 0x80 ? '1' : '0'), ((byte) & 0x40 ? '1' : '0'), ((byte) & 0x20 ? '1' : '0'), ((byte) & 0x10 ? '1' : '0'),  \
     ((byte) & 0x08 ? '1' : '0'), ((byte) & 0x04 ? '1' : '0'), ((byte) & 0x02 ? '1' : '0'), ((byte) & 0x01 ? '1' : '0')
-
-
