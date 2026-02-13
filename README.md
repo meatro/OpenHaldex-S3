@@ -85,14 +85,21 @@ Available pages:
 
 - Home dashboard (controller toggle, live gauges, engagement bar)
 - Live map editor (9x7 speed/throttle with active trace)
+- Speed settings (curve editor + mode behavior controls)
+- Throttle settings (curve editor + mode behavior controls)
+- RPM settings (curve editor + mode behavior controls)
 - CAN viewer (decoded + raw, bus filter, token filter, diagnostic presets)
 - Diagnostics (controller/CAN/frame/network status)
+- Logs (live log view + runtime logging profile controls)
+- Setup (signal mapping + controller setup controls)
 - OTA updater (check/install progress)
+- Help / About
 
 CAN viewer extras:
 
 - 30s downloadable text dump (`/api/canview/dump`)
 - Safe diagnostic capture mode (`/api/canview/capture`) that forces Controller OFF + Broadcast ON while active
+- Inline row-color legend for RX / TX / generated frames
 
 No apps, no serial adapters, no special tools.
 
@@ -178,6 +185,21 @@ See `data/UI-LICENSE.txt` for details.
 
 This section tracks engineering-level changes made during the S3 port and stabilization work.
 
+### Latest Rolling Updates (Current Working Tree)
+
+- Unified runtime UI script surface on `data/app.js` (all firmware UI pages now load one shared controller file).
+- Retired legacy `data/scripts.js` page dependency and folded route-specific UI controllers into the shared app runtime.
+- Extended mode-behavior controls on `map/speed/throttle/rpm` pages with explicit per-setting enable toggles:
+  - disengage-under-speed
+  - minimum-throttle gate
+  - high-speed disable gate
+  - release-ramp gate
+- Added value-retention behavior for disabled gates:
+  - users can disable a gate without losing the entered threshold value
+  - re-enable restores the saved value and applies it through `/api/settings`
+- Added dedicated UI pages and nav coverage for `speed`, `throttle`, `rpm`, `logs`, `setup`, `help`, and `about`.
+- Added CAN viewer row-color legend (RX/TX/GEN) to clarify frame origin/state while inspecting traffic.
+
 ### Platform + Build System
 
 - Migrated and pinned the project to PlatformIO with explicit ESP32 package versions for reproducible builds.
@@ -199,8 +221,9 @@ This section tracks engineering-level changes made during the S3 port and stabil
 ### CAN Stack + Bus Roles
 
 - Implemented dual-bus handling for LilyGo T-2CAN-S3:
-  - Chassis bus via MCP2515
-  - Haldex bus via ESP32 TWAI
+  - Chassis bus via ESP32-S3 internal TWAI
+  - Haldex bus via MCP2515 (SPI)
+- Added compile-time bus role flag in pin config (`OH_CAN_HALDEX_MCP2515`) and mapped send/receive paths to keep logical `chassis_*` and `haldex_*` interfaces stable.
 - Added explicit bridge TX path tagging for generated vs bridged frames.
 - Added frame-level diagnostics for last sent key frames (motor/brake IDs) including:
   - payload bytes
@@ -212,6 +235,12 @@ This section tracks engineering-level changes made during the S3 port and stabil
 - Integrated 2D map-driven lock control path with bilinear interpolation:
   - speed bins x throttle bins
   - editable lock table
+- Added per-mode low-speed disengage controls (`map/speed/throttle/rpm`) with full-throttle launch override (allows lock request below cutoff at ~99% pedal).
+- Added global runtime gates/toggles surfaced in settings APIs and UI:
+  - minimum throttle gate (`disableThrottle`)
+  - disable-above-speed gate (`disableSpeed`)
+  - broadcast bridge enable (`broadcastOpenHaldexOverCAN`)
+  - controller enable/disable (`disableController`)
 - Implemented mode behavior simplification around controller enabled/disabled workflow:
   - Controller disabled -> stock/bridge behavior
   - Controller enabled -> map-driven behavior
@@ -238,7 +267,25 @@ This section tracks engineering-level changes made during the S3 port and stabil
   - `/api/canview`
   - `/api/canview/dump`
   - `/api/canview/capture`
+  - `/api/logs`, `/api/logs/read`, `/api/logs/delete`, `/api/logs/clear`
 - Normalized status payloads for UI pages (home/map/diag/canview/ota) to consume one consistent telemetry contract.
+
+### Logging + Runtime Debug Controls
+
+- Added filesystem-backed structured logging (`/logs`) with scoped outputs:
+  - all events (`/logs/all.txt`)
+  - CAN-specific stream (`/logs/can/can.txt`)
+  - error stream (`/logs/error/error.txt`)
+- Added log rotation with bounded file sizes to prevent unbounded growth.
+- Routed INFO/WARN/ERROR/DEBUG and CAN frame events into file logging with runtime category gating.
+- Added runtime logging controls in `/api/settings` and status reflection in `/api/status`:
+  - master file logging
+  - CAN/error file streams
+  - serial emit toggle
+  - firmware/network/CAN debug categories
+- Added protection behavior for high-verbosity debug capture profiles:
+  - forces controller to STOCK/off while active (at boot and on settings updates)
+  - reports `debugCaptureActive` in API responses for UI visibility
 
 ### CAN Viewer Overhaul
 
@@ -261,7 +308,7 @@ This section tracks engineering-level changes made during the S3 port and stabil
 
 ### UI/Frontend Consolidation
 
-- Consolidated duplicated inline CSS/JS into shared `data/styles.css` and `data/scripts.js`.
+- Consolidated duplicated inline CSS/JS into shared `data/styles.css` and shared runtime controller `data/app.js`.
 - Added consistent top navigation across pages.
 - Added main page live telemetry visuals:
   - speed/throttle gauges (responsive sizing)
@@ -269,6 +316,8 @@ This section tracks engineering-level changes made during the S3 port and stabil
 - Added map live-trace improvements and active-cell visibility tuning.
 - Added column shaping controls in the map editor for gradient edits across a selected speed bin.
 - Added UX consistency updates for controller toggle semantics and diagnostics naming.
+- Added dedicated dynamic-mode behavior controls on curve pages (low-speed disengage + global gating toggles) and aligned mode activation workflow to the Home page controls.
+- Added explicit per-setting enable/disable toggles for dynamic mode behavior controls while preserving user-entered thresholds when disabled.
 
 ### Networking (AP/STA + mDNS)
 
@@ -276,6 +325,7 @@ This section tracks engineering-level changes made during the S3 port and stabil
   - attempt STA (hotspot creds) with timeout window
   - fall back to AP if STA unavailable
 - Added persistent Wi-Fi credentials + STA enable state via Preferences storage.
+- Added configurable AP password support (`8..63` chars) via `/api/wifi` for securing the device hotspot.
 - Added network status reporting endpoint and UI block for mode/IP/hostname/internet state.
 - Added mDNS support for `openhaldex.local` and AP IP fallback workflows.
 

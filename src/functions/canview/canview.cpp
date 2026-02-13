@@ -1,6 +1,7 @@
 #include "functions/canview/canview.h"
 #include "functions/canview/vw_pq_chassis_dbc.h"
 #include "functions/core/state.h"
+#include "functions/storage/filelog.h"
 #include <math.h>
 
 struct canview_frame_t {
@@ -129,6 +130,8 @@ static void canview_push_dump(const twai_message_t& msg, uint8_t bus, uint8_t di
     e.data[i] = (i < msg.data_length_code) ? msg.data[i] : 0;
   }
   canview_dump_idx = (uint16_t)((canview_dump_idx + 1) % CANVIEW_DUMP_HISTORY);
+
+  filelogLogCanFrame(msg, bus, dir, generated);
 }
 void canviewCacheFrame(const twai_message_t& msg, uint8_t bus) {
   if (bus == 0) {

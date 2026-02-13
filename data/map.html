@@ -1,120 +1,282 @@
 <!--
-OpenHaldex-S3 UI
-© 2026 SpringfieldVW.com
+OpenHaldex-S3 Map Editor UI
+&copy; 2026 SpringfieldVW.com
 Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 -->
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>OpenHaldex Map Editor</title>
-    <link rel="stylesheet" href="/styles.css?v=9" />
-  </head>
-  <body data-page="map">
-    <header class="appHeader">
-      <div class="titleWrap">
-        <div class="brandMark">OH</div>
-        <div>
-          <h1>Map Editor</h1>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenHaldex-S3 | Map Editor</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body data-theme="dark" data-page="map">
+  <div class="container">
+
+    <!-- Slide Menu Overlay -->
+    <nav id="main-menu" class="slide-menu" aria-label="Main menu" aria-hidden="true">
+      <div class="menu-header">
+        <button type="button" class="menu-close" aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18" />
+            <line x1="6" y1="6" x2="18" y2="18" />
+          </svg>
+        </button>
+        <div class="menu-brand">
+          <div class="brand-logo">OH</div>
+          <div class="brand-text">
+            <span class="brand-title">OpenHaldex-S3</span>
+            <span class="brand-subtitle">by springfieldvw.com</span>
+          </div>
         </div>
       </div>
-      <div class="toolbar">
-        <label class="toggle" title="Toggle light/dark">
-          <input id="themeSwitch" type="checkbox" />
-          <span class="label" id="themeLabel">Light</span>
-          <div aria-hidden="true" class="dot"></div>
-        </label>
+      <ul class="menu-items">
+        <li><a href="./index.html">Home</a></li>
+        <li><a href="./map.html">Map</a></li>
+        <li><a href="./speed.html">Speed Settings</a></li>
+        <li><a href="./throttle.html">Throttle Settings</a></li>
+        <li><a href="./rpm.html">RPM Settings</a></li>
+        <li><a href="./canview.html">CAN View</a></li>
+        <li><a href="./diag.html">Diagnostics</a></li>
+        <li><a href="./logs.html">Logs</a></li>
+        <li><a href="./setup.html">Setup</a></li>
+        <li><a href="./ota.html">OTA</a></li>
+        <li><a href="./help.html">Help</a></li>
+        <li><a href="./about.html">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="menu-backdrop" hidden></div>
+
+    <!-- App Header -->
+    <header class="header">
+      <button type="button" class="header-btn menu-toggle" aria-label="Open menu" aria-controls="main-menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2" /></svg>
+      </button>
+      <div class="header-brand">
+        <div class="brand-logo">OH</div>
+        <div class="brand-text">
+          <span class="brand-title">OpenHaldex-S3</span>
+          <span class="brand-subtitle">by springfieldvw.com</span>
+        </div>
+      </div>
+      <div class="header-icons">
+        <button type="button" class="header-btn fullscreen-toggle" aria-label="Enter fullscreen">
+          <svg class="fullscreen-icon expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3" />
+          </svg>
+          <svg class="fullscreen-icon compress-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3" />
+          </svg>
+        </button>
+        <button type="button" class="header-btn theme-toggle" aria-label="Switch theme">
+          <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5" />
+            <line x1="12" y1="1" x2="12" y2="3" />
+            <line x1="12" y1="21" x2="12" y2="23" />
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" />
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
+            <line x1="1" y1="12" x2="3" y2="12" />
+            <line x1="21" y1="12" x2="23" y2="12" />
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" />
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
+          </svg>
+          <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
+          </svg>
+        </button>
+        <div class="header-btn wifi-icon" role="status" aria-label="Wi-Fi connected">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0" />
+            <path d="M8.5 16.5a6 6 0 0 1 7 0" />
+            <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none" />
+          </svg>
+        </div>
       </div>
     </header>
 
-    <nav class="navBar">
-      <a href="/">Home</a>
-      <a href="/map">Map</a>
-      <a href="/canview">CAN View</a>
-      <a href="/diag">Diagnostics</a>
-      <a href="/ota">OTA</a>
-    </nav>
-
-    <main>
-      <div class="panel">
-        <div class="hint">Live map table (active cell follows speed/throttle).</div>
-        <div class="grid">
-          <table id="mapTable"></table>
-        </div>
-      </div>
-
-      <div class="panel">
-        <div class="row mapRow">
-          <label class="grow"
-            >Map file
-            <select id="mapSelect" class="grow"></select
-          ></label>
-          <button id="btnLoadMap">Load selected</button>
-          <button id="btnRefresh">Refresh</button>
-          <button id="btnLoad">Load current</button>
-          <button id="btnSave">Save current</button>
+    <main class="map-main" aria-label="Map editor">
+      <div class="grid-container map-editor-grid">
+        <div class="col-12 map-editor-col">
+          <section class="map-matrix-card">
+            <div class="map-section-head">
+              <h2>Torque Request Table</h2>
+            </div>
+            <table id="mapTable" class="map-matrix" aria-label="Torque map editor table"></table>
+            <p class="map-subtle">Click a speed header to pick a column for shaping.</p>
+          </section>
         </div>
 
-        <div class="row mapRow">
-          <label class="grow"
-            >Save as <input id="mapName" type="text" placeholder="new map name" class="grow"
-          /></label>
-          <button id="btnSaveMap">Save as new</button>
-          <button id="btnDeleteMap">Delete selected</button>
+        <div class="col-12 map-controls-col">
+          <section class="map-controls" aria-label="Map controls">
+            <details class="ui-details map-details" data-detail="map-file">
+              <summary>Map File</summary>
+              <div class="map-control-row">
+                <select id="mapSelect" class="map-input map-select" aria-label="Saved maps"></select>
+                <button type="button" id="btnLoadMap" class="map-btn">Load</button>
+                <button type="button" id="btnSave" class="map-btn primary">Save</button>
+                <input id="mapName" class="map-input map-name" type="text" placeholder="conservative.txt" />
+                <button type="button" id="btnSaveMap" class="map-btn">Save As</button>
+                <button type="button" id="btnDeleteMap" class="map-btn secondary">Delete</button>
+                <button type="button" id="btnDownload" class="map-btn secondary">Download TXT</button>
+                <label class="map-upload map-upload-inline">
+                  <input id="fileInput" type="file" accept=".txt" aria-label="Upload TXT map" />
+                </label>
+              </div>
+            </details>
+
+            <details class="ui-details map-details" data-detail="map-shape">
+              <summary>Column Shaping</summary>
+              <div class="map-shape-row">
+                <span class="map-subhead">Selected</span>
+                <span id="shapeColLabel" class="map-pill">None</span>
+                <label class="map-range map-range-inline" for="shapeStart">
+                  <span>Start</span>
+                  <input id="shapeStart" type="range" min="0" max="100" value="0" />
+                  <span id="shapeStartVal" class="map-pill">0</span>
+                </label>
+                <label class="map-range map-range-inline" for="shapeEnd">
+                  <span>End</span>
+                  <input id="shapeEnd" type="range" min="0" max="100" value="100" />
+                  <span id="shapeEndVal" class="map-pill">100</span>
+                </label>
+                <button type="button" id="btnApplyShape" class="map-btn">Apply Shape</button>
+              </div>
+            </details>
+
+            <details class="ui-details map-details" data-detail="map-disengage">
+              <summary>Mode Behavior</summary>
+              <div class="map-control-row map-disengage-row">
+                <div class="map-disengage-field map-setting-field">
+                  <div class="map-setting-head">
+                    <label for="mapDisengageSpeed">Disengage under speed (km/h)</label>
+                    <label class="ui-toggle-row map-inline-toggle">
+                      <input id="mapEnableDisengageSpeed" type="checkbox" checked />
+                      <span>Enable</span>
+                    </label>
+                  </div>
+                  <input
+                    id="mapDisengageSpeed"
+                    class="map-input"
+                    type="number"
+                    min="0"
+                    max="300"
+                    step="1"
+                    value="0"
+                  />
+                </div>
+                <div class="map-disengage-field map-setting-field">
+                  <div class="map-setting-head">
+                    <label for="mapDisableThrottle">Minimum throttle before lock request (%)</label>
+                    <label class="ui-toggle-row map-inline-toggle">
+                      <input id="mapEnableThrottleGate" type="checkbox" checked />
+                      <span>Enable</span>
+                    </label>
+                  </div>
+                  <input
+                    id="mapDisableThrottle"
+                    class="map-input"
+                    type="number"
+                    min="0"
+                    max="100"
+                    step="1"
+                    value="0"
+                  />
+                </div>
+                <div class="map-disengage-field map-setting-field">
+                  <div class="map-setting-head">
+                    <label for="mapDisableSpeed">Disable lock above speed (km/h)</label>
+                    <label class="ui-toggle-row map-inline-toggle">
+                      <input id="mapEnableSpeedGate" type="checkbox" checked />
+                      <span>Enable</span>
+                    </label>
+                  </div>
+                  <input
+                    id="mapDisableSpeed"
+                    class="map-input"
+                    type="number"
+                    min="0"
+                    max="300"
+                    step="1"
+                    value="0"
+                  />
+                </div>
+                <div class="map-disengage-field map-setting-field">
+                  <div class="map-setting-head">
+                    <label for="mapReleaseRate">Lock release ramp (%/s)</label>
+                    <label class="ui-toggle-row map-inline-toggle">
+                      <input id="mapEnableReleaseRate" type="checkbox" checked />
+                      <span>Enable</span>
+                    </label>
+                  </div>
+                  <input
+                    id="mapReleaseRate"
+                    class="map-input"
+                    type="number"
+                    min="0"
+                    max="1000"
+                    step="1"
+                    value="120"
+                  />
+                </div>
+                <label class="ui-toggle-row map-toggle-row">
+                  <input id="mapBroadcastBridge" type="checkbox" checked />
+                  <span>Broadcast Haldex status to chassis bus</span>
+                </label>
+                <label class="ui-toggle-row map-toggle-row">
+                  <input id="mapControllerEnabled" type="checkbox" checked />
+                  <span>Enable controller output</span>
+                </label>
+                <button type="button" id="btnSaveMapDisengage" class="map-btn">Save Mode Settings</button>
+                <span class="map-subtle map-disengage-note">Use Enable toggles to apply each gate while keeping your typed values saved for later. Full throttle bypasses low-speed disengage for launch control. Other values here are shared across all dynamic modes.</span>
+              </div>
+            </details>
+
+            <details class="ui-details map-details" data-detail="map-bins">
+              <summary>Bin Controls</summary>
+              <div class="map-bins-grid">
+                <div>
+                  <div class="map-subhead">Speed bins</div>
+                  <div id="speedBins" class="map-bins"></div>
+                </div>
+                <div>
+                  <div class="map-subhead">Throttle bins</div>
+                  <div id="throttleBins" class="map-bins"></div>
+                </div>
+              </div>
+            </details>
+          </section>
         </div>
-
-        <details class="mapAdvanced">
-          <summary>Import / Export</summary>
-          <div class="row mapRow">
-            <button id="btnDownload">Download TXT</button>
-            <label class="fileRow"
-              >Upload TXT <input id="fileInput" type="file" accept=".txt"
-            /></label>
-          </div>
-        </details>
-
-        <details class="mapAdvanced">
-          <summary>Bin Configuration</summary>
-          <div class="row mapBinsRow">
-            <div>
-              <div class="sub">Speed bins</div>
-              <div class="bins" id="speedBins"></div>
-            </div>
-            <div>
-              <div class="sub">Throttle bins</div>
-              <div class="bins" id="throttleBins"></div>
-            </div>
-          </div>
-        </details>
-
-        <details class="mapAdvanced">
-          <summary>Column Shaping</summary>
-          <div class="row mapRow mapShapeRow">
-            <div class="shapeMeta">
-              <span class="sub">Selected column</span>
-              <span id="shapeColLabel" class="pill">None</span>
-            </div>
-            <label class="mapRange"
-              >Start
-              <input id="shapeStart" type="range" min="0" max="100" value="0" />
-              <span id="shapeStartVal" class="pill">0</span>
-            </label>
-            <label class="mapRange"
-              >End
-              <input id="shapeEnd" type="range" min="0" max="100" value="100" />
-              <span id="shapeEndVal" class="pill">100</span>
-            </label>
-            <button id="btnApplyShape">Apply to column</button>
-          </div>
-        </details>
-
-        <span class="status" id="status"></span>
       </div>
     </main>
 
-    <footer class="siteFooter">OpenHaldex-S3 by SpringfieldVW.com</footer>
+    <footer class="footer">
+      <div>OpenHaldex-S3 &copy; SpringfieldVW.com</div>
+      <div class="version">
+        v0.6.0
+        <span class="update-available">
+          <svg viewBox="0 0 16 16">
+            <circle cx="8" cy="8" r="7" fill="currentColor" />
+            <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="white" stroke-width="1.5" />
+          </svg>
+          new version available
+        </span>
+      </div>
+    </footer>
 
-    <script src="/scripts.js?v=9"></script>
-  </body>
+  </div>
+  <script src="./app.js"></script>
+</body>
 </html>
+
+
+
+
+
+
+
+
+
+
+

@@ -1,209 +1,5 @@
-// OpenHaldex-S3 UI
-// © 2026 SpringfieldVW.com
-// Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
-
-function initTheme() {
-  const stored = localStorage.getItem("ohTheme");
-  const prefersDark =
-    window.matchMedia && window.matchMedia("(prefers-color-scheme: dark)").matches;
-  const dark = stored ? stored === "dark" : prefersDark;
-  document.body.classList.toggle("dark", dark);
-  const toggle = document.getElementById("themeSwitch");
-  const label = document.getElementById("themeLabel");
-  if (toggle && label) {
-    toggle.checked = dark;
-    label.textContent = dark ? "Dark" : "Light";
-    toggle.addEventListener("change", () => {
-      const on = toggle.checked;
-      document.body.classList.toggle("dark", on);
-      localStorage.setItem("ohTheme", on ? "dark" : "light");
-      label.textContent = on ? "Dark" : "Light";
-    });
-  }
-}
-
-// Entrypoint: selects per-page initializer using body data-page attribute.
-function initApp() {
-  initTheme();
-  const page = document.body.dataset.page;
-  if (page === "home") initHomePage();
-  if (page === "map") initMapPage();
-  if (page === "canview") initCanviewPage();
-  if (page === "diag") initDiagPage();
-  if (page === "ota") initOtaPage();
-}
-
-document.addEventListener("DOMContentLoaded", initApp);
-
-// Utility: normalize map labels from filesystem paths.
-function nameFromPath(path) {
-  if (!path) return "";
-  const base = path.split("/").pop() || path;
-  const dot = base.lastIndexOf(".");
-  return dot > 0 ? base.slice(0, dot) : base;
-}
-
-// Utility: quick extension extraction for map list display.
-function formatFromPath(path) {
-  if (!path) return "";
-  const dot = path.lastIndexOf(".");
-  return dot > 0 ? path.slice(dot + 1) : "";
-}
-
-// Shared fetch helper that enforces HTTP status checks before JSON parse.
-async function fetchJson(url, options) {
-  const res = await fetch(url, options);
-  if (!res.ok) throw new Error("HTTP " + res.status);
-  return res.json();
-}
-
-// Home page controller:
-// - controller/broadcast toggles
-// - live speed/throttle gauges
-// - engagement bar + map quick load
-function initHomePage() {
-  const statusEl = document.getElementById("status");
-  const mapSelect = document.getElementById("mapSelect");
-  const haldexGenSelect = document.getElementById("haldexGen");
-  const modeStatus = document.getElementById("modeStatus");
-  const toggleController = document.getElementById("toggleController");
-  const toggleBroadcast = document.getElementById("toggleBroadcast");
-  const speedNeedle = document.getElementById("gaugeSpeedNeedle");
-  const throttleNeedle = document.getElementById("gaugeThrottleNeedle");
-  const speedValueEl = document.getElementById("gaugeSpeedValue");
-  const throttleValueEl = document.getElementById("gaugeThrottleValue");
-  const engagementBar = document.getElementById("engagementBar");
-  const engagementValueEl = document.getElementById("engagementValue");
-
-  function setStatus(msg) {
-    statusEl.textContent = msg || "";
-  }
-
-  function setGauge(needle, valueEl, value, max) {
-    if (!needle || !valueEl) return;
-    const v = Math.max(0, Math.min(max, Number(value) || 0));
-    const ratio = max > 0 ? v / max : 0;
-    const deg = -120 + ratio * 240;
-    needle.style.transform = `translateX(-50%) rotate(${deg}deg)`;
-    valueEl.textContent = Math.round(v);
-  }
-
-  function setEngagement(value) {
-    if (!engagementBar) return;
-    const min = 30;
-    const max = 170;
-    const raw = Number(value);
-    const clamped = Math.max(min, Math.min(max, Number.isFinite(raw) ? raw : min));
-    const pct = max > min ? ((clamped - min) / (max - min)) * 100 : 0;
-    engagementBar.style.width = pct.toFixed(1) + "%";
-    if (engagementValueEl) engagementValueEl.textContent = "";
-  }
-
-  async function refreshStatus() {
-    try {
-      const data = await fetchJson("/api/status");
-      toggleController.checked = !data.disableController;
-      toggleBroadcast.checked = !!data.broadcastOpenHaldexOverCAN;
-      if (haldexGenSelect && data.haldexGeneration) {
-        haldexGenSelect.value = String(data.haldexGeneration);
-      }
-      const mode = toggleController.checked ? "MAP" : "STOCK";
-      modeStatus.textContent = `Mode: ${mode}`;
-      const tel = data.telemetry || {};
-      setGauge(speedNeedle, speedValueEl, tel.speed, 200);
-      setGauge(throttleNeedle, throttleValueEl, tel.throttle, 100);
-      // Prefer the same engagement source shown on diagnostics; fall back only if needed.
-      const engagementCandidate = [tel.haldexEngagement, tel.act, tel.haldexEngagementRaw]
-        .map((v) => Number(v))
-        .find((v) => Number.isFinite(v) && v >= 0);
-      setEngagement(engagementCandidate);
-    } catch (e) {
-      modeStatus.textContent = "Status failed: " + e.message;
-    }
-  }
-
-  async function updateSettings() {
-    try {
-      await fetchJson("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          disableController: !toggleController.checked,
-          broadcastOpenHaldexOverCAN: toggleBroadcast.checked,
-        }),
-      });
-    } catch (e) {
-      modeStatus.textContent = "Update failed: " + e.message;
-    }
-  }
-
-  async function saveHaldexGen() {
-    if (!haldexGenSelect) return;
-    const gen = parseInt(haldexGenSelect.value, 10);
-    if (!gen) return;
-    try {
-      await fetchJson("/api/settings", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ haldexGeneration: gen }),
-      });
-    } catch (e) {
-      modeStatus.textContent = "Haldex gen update failed: " + e.message;
-    }
-  }
-
-  async function refreshMapList(selectPath) {
-    try {
-      const data = await fetchJson("/api/maps");
-      const current = data.current || "";
-      mapSelect.innerHTML = "";
-      (data.maps || []).forEach((entry) => {
-        const opt = document.createElement("option");
-        opt.value = entry.path;
-        opt.textContent = `${entry.name} (${entry.path})`;
-        mapSelect.appendChild(opt);
-      });
-      if (current && !Array.from(mapSelect.options).some((o) => o.value === current)) {
-        const opt = document.createElement("option");
-        const name = nameFromPath(current) || "current";
-        opt.value = current;
-        opt.textContent = `${name} (${current})`;
-        mapSelect.appendChild(opt);
-      }
-      const target = selectPath || current;
-      if (target) mapSelect.value = target;
-    } catch (e) {
-      setStatus("Map list failed: " + e.message);
-    }
-  }
-
-  async function loadSelectedMap() {
-    const path = mapSelect.value;
-    if (!path) return;
-    setStatus("Loading map...");
-    try {
-      await fetchJson("/api/maps/load", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ path }),
-      });
-      setStatus("Loaded: " + path);
-      refreshMapList(path);
-    } catch (e) {
-      setStatus("Load failed: " + e.message);
-    }
-  }
-
-  document.getElementById("btnRefresh").onclick = () => refreshMapList(mapSelect.value);
-  document.getElementById("btnLoad").onclick = loadSelectedMap;
-  document.getElementById("btnHaldexGen").onclick = saveHaldexGen;
-  toggleController.onchange = updateSettings;
-  toggleBroadcast.onchange = updateSettings;
-
-  refreshMapList("");
-  refreshStatus();
-  setInterval(refreshStatus, 1000);
-}
+// OpenHaldex-S3 ui-dev page controllers (ported from data/scripts.js)
+// This file keeps map/canview/diag/ota logic local to ui-dev.
 
 // Map editor controller:
 // - bin editors + lock table
@@ -212,6 +8,8 @@ function initHomePage() {
 function initMapPage() {
   const defaultSpeed = [0, 5, 10, 20, 40, 60, 80, 100, 140];
   const defaultThrottle = [0, 5, 10, 20, 40, 60, 80];
+  const MAP_COLS = defaultSpeed.length;
+  const MAP_ROWS = defaultThrottle.length;
   const defaultLock = [
     [0, 0, 0, 0, 0, 0, 0, 0, 0],
     [0, 0, 0, 0, 0, 0, 0, 0, 0],
@@ -241,12 +39,128 @@ function initMapPage() {
   const shapeStartVal = document.getElementById("shapeStartVal");
   const shapeEndVal = document.getElementById("shapeEndVal");
   const btnApplyShape = document.getElementById("btnApplyShape");
+  const mapDisengageInput = document.getElementById("mapDisengageSpeed");
+  const btnSaveMapDisengage = document.getElementById("btnSaveMapDisengage");
+  const mapThrottleGateInput = document.getElementById("mapDisableThrottle");
+  const mapSpeedGateInput = document.getElementById("mapDisableSpeed");
+  const mapBroadcastToggle = document.getElementById("mapBroadcastBridge");
+  const mapControllerToggle = document.getElementById("mapControllerEnabled");
 
   let headerCells = [];
   let selectedCol = null;
 
   function setStatus(msg) {
-    statusEl.textContent = msg || "";
+    if (statusEl) {
+      statusEl.textContent = msg || "";
+    }
+  }
+
+  function toInt(value, fallback = 0) {
+    const n = parseInt(value, 10);
+    return Number.isFinite(n) ? n : fallback;
+  }
+
+  function clamp(value, min, max) {
+    return Math.max(min, Math.min(max, value));
+  }
+
+  function getMapDisengageValue() {
+    if (!mapDisengageInput) return 0;
+    const value = clamp(toInt(mapDisengageInput.value, 0), 0, 300);
+    mapDisengageInput.value = String(value);
+    return value;
+  }
+
+  function setMapDisengageValue(value) {
+    if (!mapDisengageInput) return;
+    mapDisengageInput.value = String(clamp(toInt(value, 0), 0, 300));
+  }
+
+  function getMapThrottleGateValue() {
+    if (!mapThrottleGateInput) return 0;
+    const value = clamp(toInt(mapThrottleGateInput.value, 0), 0, 100);
+    mapThrottleGateInput.value = String(value);
+    return value;
+  }
+
+  function setMapThrottleGateValue(value) {
+    if (!mapThrottleGateInput) return;
+    mapThrottleGateInput.value = String(clamp(toInt(value, 0), 0, 100));
+  }
+
+  function getMapSpeedGateValue() {
+    if (!mapSpeedGateInput) return 0;
+    const value = clamp(toInt(mapSpeedGateInput.value, 0), 0, 300);
+    mapSpeedGateInput.value = String(value);
+    return value;
+  }
+
+  function setMapSpeedGateValue(value) {
+    if (!mapSpeedGateInput) return;
+    mapSpeedGateInput.value = String(clamp(toInt(value, 0), 0, 300));
+  }
+
+  function summarizeMapModeSettings(settings) {
+    const disengage = settings.disengage > 0 ? `Disengage below ${settings.disengage} km/h.` : "Disengage disabled.";
+    const throttleGate = settings.disableThrottle > 0 ? `Throttle >= ${settings.disableThrottle}%.` : "Throttle gate off.";
+    const speedGate = settings.disableSpeed > 0 ? `Disable above ${settings.disableSpeed} km/h.` : "High-speed gate off.";
+    const broadcast = settings.broadcastOpenHaldexOverCAN ? "Bridge on." : "Bridge off.";
+    const controller = settings.disableController ? "Controller off." : "Controller on.";
+    return `${disengage} ${throttleGate} ${speedGate} ${broadcast} ${controller}`;
+  }
+
+  function applyMapModeSettingsFromStatus(data) {
+    const disengage = data && data.disengageUnderSpeed ? data.disengageUnderSpeed.map : 0;
+    setMapDisengageValue(disengage || 0);
+    setMapThrottleGateValue(data ? data.disableThrottle : 0);
+    setMapSpeedGateValue(data ? data.disableSpeed : 0);
+    if (mapBroadcastToggle) mapBroadcastToggle.checked = !data || data.broadcastOpenHaldexOverCAN !== false;
+    if (mapControllerToggle) mapControllerToggle.checked = !data || !Boolean(data.disableController);
+    return {
+      disengage: getMapDisengageValue(),
+      disableThrottle: getMapThrottleGateValue(),
+      disableSpeed: getMapSpeedGateValue(),
+      broadcastOpenHaldexOverCAN: mapBroadcastToggle ? Boolean(mapBroadcastToggle.checked) : true,
+      disableController: mapControllerToggle ? !Boolean(mapControllerToggle.checked) : false,
+    };
+  }
+
+  function readMapModeSettingsPayload() {
+    return {
+      disableThrottle: getMapThrottleGateValue(),
+      disableSpeed: getMapSpeedGateValue(),
+      broadcastOpenHaldexOverCAN: mapBroadcastToggle ? Boolean(mapBroadcastToggle.checked) : true,
+      disableController: mapControllerToggle ? !Boolean(mapControllerToggle.checked) : false,
+      disengageUnderSpeed: {
+        map: getMapDisengageValue(),
+      },
+    };
+  }
+
+  function normalizeBins(values, fallback, min, max, length) {
+    const targetLength = Number.isInteger(length) && length > 0 ? length : fallback.length;
+    const src = Array.isArray(values) ? values : [];
+    const out = [];
+    for (let i = 0; i < targetLength; i++) {
+      const fallbackValue = i < fallback.length ? fallback[i] : fallback[fallback.length - 1] || 0;
+      const raw = i < src.length ? src[i] : fallbackValue;
+      out.push(clamp(toInt(raw, fallbackValue), min, max));
+    }
+    return out;
+  }
+
+  function normalizeLockTable(lockTable, rows, cols) {
+    const normalized = [];
+    for (let r = 0; r < rows; r++) {
+      const srcRow = Array.isArray(lockTable) ? lockTable[r] : null;
+      const row = [];
+      for (let c = 0; c < cols; c++) {
+        const raw = Array.isArray(srcRow) ? srcRow[c] : 0;
+        row.push(clamp(toInt(raw, 0), 0, 100));
+      }
+      normalized.push(row);
+    }
+    return normalized;
   }
 
   function updateShapeLabels() {
@@ -260,7 +174,7 @@ function initMapPage() {
     const input = cell.querySelector("input");
     if (!input) return;
     input.value = value;
-    applyCellColor(input, value);
+    applyCellColor(cell, value);
   }
 
   function setSelectedColumn(index) {
@@ -273,11 +187,45 @@ function initMapPage() {
     }
   }
 
-  function applyCellColor(input, value) {
+  function applyCellColor(cell, value) {
+    if (!cell) return;
     const v = Math.max(0, Math.min(100, parseInt(value || 0, 10)));
-    const hue = 120 - v * 1.2;
-    input.style.backgroundColor = `hsl(${hue}, 70%, 45%)`;
-    input.style.color = "#0b0f12";
+    const isLight = document.body && document.body.dataset && document.body.dataset.theme === "light";
+    const styles = window.getComputedStyle(document.body);
+    const brandRgb = (styles.getPropertyValue("--brand-rgb") || "").trim();
+    const textColor = (styles.getPropertyValue("--text") || "").trim();
+    const alpha = 0.06 + (v / 100) * 0.26;
+    const input = cell.querySelector("input");
+    const fallbackRgb = isLight ? "0, 81, 206" : "187, 10, 48";
+    cell.style.backgroundColor = `rgba(${brandRgb || fallbackRgb}, ${alpha.toFixed(3)})`;
+    cell.style.color = textColor || (isLight ? "#0b1324" : "#e8e9ee");
+    if (input) input.style.color = "inherit";
+  }
+
+  function repaintHeatmap() {
+    for (let r = 0; r < state.throttle.length; r++) {
+      for (let c = 0; c < state.speed.length; c++) {
+        const cell = (cellInputs[r] || [])[c];
+        if (!cell) continue;
+        applyCellColor(cell, state.lock[r][c]);
+      }
+    }
+  }
+
+  function watchThemeChanges() {
+    if (!document.body || typeof MutationObserver === "undefined") return;
+    const observer = new MutationObserver((mutations) => {
+      for (const mutation of mutations) {
+        if (mutation.type === "attributes") {
+          repaintHeatmap();
+          break;
+        }
+      }
+    });
+    observer.observe(document.body, {
+      attributes: true,
+      attributeFilter: ["data-theme", "class"],
+    });
   }
 
   function buildBins() {
@@ -290,7 +238,9 @@ function initMapPage() {
       input.min = 0;
       input.max = 255;
       input.onchange = () => {
-        state.speed[i] = parseInt(input.value || 0, 10);
+        const next = clamp(toInt(input.value, state.speed[i]), 0, 255);
+        input.value = String(next);
+        state.speed[i] = next;
       };
       speedBinsEl.appendChild(input);
     });
@@ -301,7 +251,9 @@ function initMapPage() {
       input.min = 0;
       input.max = 100;
       input.onchange = () => {
-        state.throttle[i] = parseInt(input.value || 0, 10);
+        const next = clamp(toInt(input.value, state.throttle[i]), 0, 100);
+        input.value = String(next);
+        state.throttle[i] = next;
       };
       throttleBinsEl.appendChild(input);
     });
@@ -311,7 +263,7 @@ function initMapPage() {
     tableEl.innerHTML = "";
     const thead = document.createElement("thead");
     const hrow = document.createElement("tr");
-    hrow.appendChild(th("Throttle"));
+    hrow.appendChild(th("T/S"));
     headerCells = [];
     state.speed.forEach((s, c) => {
       const header = th("S" + s);
@@ -331,15 +283,17 @@ function initMapPage() {
       state.speed.forEach((_, c) => {
         const cell = document.createElement("td");
         const input = document.createElement("input");
-        input.type = "number";
-        input.min = 0;
-        input.max = 100;
+        input.type = "text";
+        input.inputMode = "numeric";
+        input.setAttribute("pattern", "[0-9]*");
+        input.setAttribute("aria-label", `Lock value T${t} S${state.speed[c]}`);
         input.value = state.lock[r][c];
-        applyCellColor(input, input.value);
+        applyCellColor(cell, input.value);
         input.onchange = () => {
-          const v = parseInt(input.value || 0, 10);
+          const v = clamp(toInt(input.value, state.lock[r][c]), 0, 100);
+          input.value = String(v);
           state.lock[r][c] = v;
-          applyCellColor(input, v);
+          applyCellColor(cell, v);
         };
         cell.appendChild(input);
         row.appendChild(cell);
@@ -412,6 +366,48 @@ function initMapPage() {
     }
   }
 
+  async function loadMapDisengageSetting(options = {}) {
+    try {
+      const data = await fetchJson("/api/status");
+      const settings = applyMapModeSettingsFromStatus(data);
+      if (!options.silent) {
+        setStatus(summarizeMapModeSettings(settings));
+      }
+      return settings;
+    } catch (e) {
+      if (!options.silent) {
+        setStatus("Mode settings load failed: " + e.message);
+      }
+      return null;
+    }
+  }
+
+  async function saveMapDisengageSetting(options = {}) {
+    const payload = readMapModeSettingsPayload();
+    await fetchJson("/api/settings", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+    let settings = {
+      disengage: payload.disengageUnderSpeed.map,
+      disableThrottle: payload.disableThrottle,
+      disableSpeed: payload.disableSpeed,
+      broadcastOpenHaldexOverCAN: payload.broadcastOpenHaldexOverCAN,
+      disableController: payload.disableController,
+    };
+    try {
+      const loaded = await loadMapDisengageSetting({ silent: true });
+      if (loaded) settings = loaded;
+    } catch {
+      // Preserve optimistic values when status reload is unavailable.
+    }
+    if (!options.silent) {
+      setStatus("Saved mode settings. " + summarizeMapModeSettings(settings));
+    }
+    return settings;
+  }
+
   async function refreshMapList(selectPath) {
     try {
       const data = await fetchJson("/api/maps");
@@ -458,13 +454,16 @@ function initMapPage() {
   async function loadFromDevice() {
     try {
       const data = await fetchJson("/api/map");
-      state.speed = data.speedBins || state.speed;
-      state.throttle = data.throttleBins || state.throttle;
-      state.lock = data.lockTable || state.lock;
+      state.speed = normalizeBins(data.speedBins, defaultSpeed, 0, 255, MAP_COLS);
+      state.throttle = normalizeBins(data.throttleBins, defaultThrottle, 0, 100, MAP_ROWS);
+      state.lock = normalizeLockTable(data.lockTable, MAP_ROWS, MAP_COLS);
       buildBins();
       buildTable();
       setStatus("Loaded current map");
     } catch (e) {
+      // Keep editor usable even when device endpoints are unavailable.
+      buildBins();
+      buildTable();
       setStatus("Load failed: " + e.message);
     }
   }
@@ -551,8 +550,8 @@ function initMapPage() {
     const lines = text.split(/\r?\n/).filter((l) => l.trim().length > 0);
     if (lines.length < 2) throw new Error("Invalid map file");
     const header = lines[0].split("\t");
-    if (header.length < 2 + defaultSpeed.length) throw new Error("Invalid map header");
-    state.speed = header.slice(2).map((v) => parseInt(v.replace(/[ST]/g, ""), 10));
+    if (header.length < 3) throw new Error("Invalid map header");
+    const parsedSpeed = header.slice(2).map((v) => parseInt(v.replace(/[ST]/g, ""), 10));
     const throttles = [];
     const lock = [];
     lines.slice(1).forEach((line) => {
@@ -561,20 +560,58 @@ function initMapPage() {
       throttles.push(t);
       lock.push(parts.slice(2).map((v) => parseInt(v, 10)));
     });
-    state.throttle = throttles;
-    state.lock = lock;
+    state.speed = normalizeBins(parsedSpeed, defaultSpeed, 0, 255, MAP_COLS);
+    state.throttle = normalizeBins(throttles, defaultThrottle, 0, 100, MAP_ROWS);
+    state.lock = normalizeLockTable(lock, MAP_ROWS, MAP_COLS);
     buildBins();
     buildTable();
     setStatus("Loaded TXT map");
   }
 
-  document.getElementById("btnRefresh").onclick = () => refreshMapList(mapSelect.value);
-  document.getElementById("btnLoadMap").onclick = loadSelectedMap;
-  document.getElementById("btnLoad").onclick = loadFromDevice;
-  document.getElementById("btnSave").onclick = saveCurrent;
-  document.getElementById("btnSaveMap").onclick = saveMapAs;
-  document.getElementById("btnDeleteMap").onclick = deleteSelectedMap;
-  document.getElementById("btnDownload").onclick = exportTxt;
+  const btnRefresh = document.getElementById("btnRefresh");
+  if (btnRefresh) btnRefresh.onclick = () => refreshMapList(mapSelect.value);
+
+  const btnLoadMap = document.getElementById("btnLoadMap");
+  if (btnLoadMap) btnLoadMap.onclick = loadSelectedMap;
+
+  const btnLoad = document.getElementById("btnLoad");
+  if (btnLoad) btnLoad.onclick = loadFromDevice;
+
+  const btnSave = document.getElementById("btnSave");
+  if (btnSave) btnSave.onclick = saveCurrent;
+
+  const btnSaveMap = document.getElementById("btnSaveMap");
+  if (btnSaveMap) btnSaveMap.onclick = saveMapAs;
+
+  const btnDeleteMap = document.getElementById("btnDeleteMap");
+  if (btnDeleteMap) btnDeleteMap.onclick = deleteSelectedMap;
+
+  const btnDownload = document.getElementById("btnDownload");
+  if (btnDownload) btnDownload.onclick = exportTxt;
+  if (mapDisengageInput) {
+    mapDisengageInput.onchange = () => {
+      setMapDisengageValue(mapDisengageInput.value);
+    };
+  }
+  if (mapThrottleGateInput) {
+    mapThrottleGateInput.onchange = () => {
+      setMapThrottleGateValue(mapThrottleGateInput.value);
+    };
+  }
+  if (mapSpeedGateInput) {
+    mapSpeedGateInput.onchange = () => {
+      setMapSpeedGateValue(mapSpeedGateInput.value);
+    };
+  }
+  if (btnSaveMapDisengage) {
+    btnSaveMapDisengage.onclick = async () => {
+      try {
+        await saveMapDisengageSetting();
+      } catch (e) {
+        setStatus("Mode settings save failed: " + e.message);
+      }
+    };
+  }
   if (shapeStart) {
     shapeStart.addEventListener("input", () => {
       updateShapeLabels();
@@ -588,22 +625,31 @@ function initMapPage() {
     });
   }
   if (btnApplyShape) btnApplyShape.onclick = () => applyColumnShape({ silent: false });
-  document.getElementById("fileInput").onchange = async (e) => {
-    const file = e.target.files[0];
-    if (!file) return;
-    try {
-      const txt = await file.text();
-      fromTxt(txt);
-      await saveCurrent();
-      await refreshMapList("");
-      setStatus("Loaded TXT map and saved current map");
-    } catch (err) {
-      setStatus(err.message || "TXT load failed");
-    }
-  };
+  const fileInput = document.getElementById("fileInput");
+  if (fileInput) {
+    fileInput.onchange = async (e) => {
+      const file = e.target.files[0];
+      if (!file) return;
+      try {
+        const txt = await file.text();
+        fromTxt(txt);
+        await saveCurrent();
+        await refreshMapList("");
+        setStatus("Loaded TXT map and saved current map");
+      } catch (err) {
+        setStatus(err.message || "TXT load failed");
+      }
+    };
+  }
 
+  watchThemeChanges();
+
+  // Render an editable fallback matrix immediately, then hydrate from device.
+  buildBins();
+  buildTable();
   refreshMapList("");
   loadFromDevice();
+  loadMapDisengageSetting({ silent: true });
   setInterval(refreshTrace, 250);
   updateShapeLabels();
 }
@@ -1029,8 +1075,13 @@ function initOtaPage() {
   const wifiStaEnable = document.getElementById("wifiStaEnable");
   const wifiSsid = document.getElementById("wifiSsid");
   const wifiPass = document.getElementById("wifiPass");
-  const btnWifiSave = document.getElementById("btnWifiSave");
-  const btnWifiClear = document.getElementById("btnWifiClear");
+  const wifiApPass = document.getElementById("wifiApPass");
+  const wifiStaStatus = document.getElementById("wifiStaStatus");
+  const wifiApStatus = document.getElementById("wifiApStatus");
+  const btnWifiSaveSta = document.getElementById("btnWifiSaveSta");
+  const btnWifiClearSta = document.getElementById("btnWifiClearSta");
+  const btnWifiSaveAp = document.getElementById("btnWifiSaveAp");
+  const btnWifiClearAp = document.getElementById("btnWifiClearAp");
 
   form.addEventListener("submit", async (e) => {
     e.preventDefault();
@@ -1055,22 +1106,39 @@ function initOtaPage() {
       const data = await fetchJson("/api/wifi");
       wifiSsid.value = data.ssid || "";
       if (wifiPass) wifiPass.value = "";
+      if (wifiApPass) wifiApPass.value = "";
       wifiStaEnable.checked = !!data.staEnabled;
+      const apMode = data.apPasswordSet ? "AP password set" : "AP open";
+      if (wifiStaStatus) {
+        wifiStaStatus.textContent = data.ssid
+          ? `Saved hotspot: ${data.ssid} | STA ${data.staEnabled ? "enabled" : "disabled"}`
+          : "No saved hotspot";
+      }
+      if (wifiApStatus) {
+        wifiApStatus.textContent = data.apPasswordSet ? "AP password is set" : "AP is open (no password)";
+      }
       if (wifiStatus) {
-        wifiStatus.textContent = data.ssid ? `Saved SSID: ${data.ssid}` : "No saved hotspot";
+        wifiStatus.textContent = data.ssid ? `Saved SSID: ${data.ssid} | ${apMode}` : `No saved hotspot | ${apMode}`;
       }
     } catch (e) {
+      if (wifiStaStatus) wifiStaStatus.textContent = "STA fetch failed: " + e.message;
+      if (wifiApStatus) wifiApStatus.textContent = "AP fetch failed: " + e.message;
       if (wifiStatus) wifiStatus.textContent = "Wi-Fi fetch failed: " + e.message;
     }
   }
 
-  async function saveWifi() {
+  async function saveStaSettings() {
     if (!wifiSsid || !wifiStaEnable) return;
     const payload = {
       ssid: wifiSsid.value || "",
-      password: wifiPass ? wifiPass.value || "" : "",
       staEnabled: !!wifiStaEnable.checked,
     };
+    if (wifiPass) {
+      const staPass = String(wifiPass.value || "").trim();
+      if (staPass.length > 0) {
+        payload.password = staPass;
+      }
+    }
     try {
       await fetchJson("/api/wifi", {
         method: "POST",
@@ -1078,31 +1146,16 @@ function initOtaPage() {
         body: JSON.stringify(payload),
       });
       if (wifiPass) wifiPass.value = "";
-      if (wifiStatus) {
-        wifiStatus.textContent = payload.ssid ? `Saved SSID: ${payload.ssid}` : "Wi-Fi cleared";
-      }
+      await loadWifi();
+      if (wifiStaStatus) wifiStaStatus.textContent = "STA settings saved";
+      if (wifiStatus) wifiStatus.textContent = "STA settings saved";
     } catch (e) {
-      if (wifiStatus) wifiStatus.textContent = "Wi-Fi save failed: " + e.message;
+      if (wifiStaStatus) wifiStaStatus.textContent = "STA save failed: " + e.message;
+      if (wifiStatus) wifiStatus.textContent = "STA save failed: " + e.message;
     }
   }
 
-  async function saveStaOnly() {
-    if (!wifiStaEnable) return;
-    try {
-      await fetchJson("/api/wifi", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ staEnabled: !!wifiStaEnable.checked }),
-      });
-      if (wifiStatus) {
-        wifiStatus.textContent = wifiStaEnable.checked ? "STA enabled" : "STA disabled";
-      }
-    } catch (e) {
-      if (wifiStatus) wifiStatus.textContent = "STA update failed: " + e.message;
-    }
-  }
-
-  async function clearWifi() {
+  async function clearStaSettings() {
     if (!wifiSsid || !wifiStaEnable) return;
     wifiSsid.value = "";
     if (wifiPass) wifiPass.value = "";
@@ -1113,15 +1166,60 @@ function initOtaPage() {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ ssid: "", password: "", staEnabled: false }),
       });
-      if (wifiStatus) wifiStatus.textContent = "Wi-Fi cleared";
+      await loadWifi();
+      if (wifiStaStatus) wifiStaStatus.textContent = "STA settings cleared";
+      if (wifiStatus) wifiStatus.textContent = "STA settings cleared";
     } catch (e) {
-      if (wifiStatus) wifiStatus.textContent = "Wi-Fi clear failed: " + e.message;
+      if (wifiStaStatus) wifiStaStatus.textContent = "STA clear failed: " + e.message;
+      if (wifiStatus) wifiStatus.textContent = "STA clear failed: " + e.message;
     }
   }
 
-  if (btnWifiSave) btnWifiSave.onclick = saveWifi;
-  if (btnWifiClear) btnWifiClear.onclick = clearWifi;
-  if (wifiStaEnable) wifiStaEnable.onchange = saveStaOnly;
+  async function saveApSettings() {
+    if (!wifiApPass) return;
+    const apPass = String(wifiApPass.value || "");
+    if (!apPass.length) {
+      if (wifiApStatus) wifiApStatus.textContent = "Enter AP password or use Clear AP Password";
+      return;
+    }
+    try {
+      await fetchJson("/api/wifi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apPassword: apPass }),
+      });
+      wifiApPass.value = "";
+      await loadWifi();
+      if (wifiApStatus) wifiApStatus.textContent = "AP password saved";
+      if (wifiStatus) wifiStatus.textContent = "AP password saved";
+    } catch (e) {
+      if (wifiApStatus) wifiApStatus.textContent = "AP save failed: " + e.message;
+      if (wifiStatus) wifiStatus.textContent = "AP save failed: " + e.message;
+    }
+  }
+
+  async function clearApSettings() {
+    if (!wifiApPass) return;
+    wifiApPass.value = "";
+    try {
+      await fetchJson("/api/wifi", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apPassword: "" }),
+      });
+      await loadWifi();
+      if (wifiApStatus) wifiApStatus.textContent = "AP password cleared (AP is open)";
+      if (wifiStatus) wifiStatus.textContent = "AP password cleared";
+    } catch (e) {
+      if (wifiApStatus) wifiApStatus.textContent = "AP clear failed: " + e.message;
+      if (wifiStatus) wifiStatus.textContent = "AP clear failed: " + e.message;
+    }
+  }
+
+  if (btnWifiSaveSta) btnWifiSaveSta.onclick = saveStaSettings;
+  if (btnWifiClearSta) btnWifiClearSta.onclick = clearStaSettings;
+  if (btnWifiSaveAp) btnWifiSaveAp.onclick = saveApSettings;
+  if (btnWifiClearAp) btnWifiClearAp.onclick = clearApSettings;
 
   function formatBytes(bytes) {
     const b = Number(bytes) || 0;

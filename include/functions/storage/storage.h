@@ -26,3 +26,7 @@ void storageClearWifiCreds();
 
 bool storageGetWifiStaEnabled();
 void storageSetWifiStaEnabled(bool enabled);
+
+bool storageGetWifiApPassword(String& pass);
+void storageSetWifiApPassword(const String& pass);
+void storageClearWifiApPassword();

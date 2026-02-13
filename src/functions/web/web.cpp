@@ -30,7 +30,10 @@ void webInit(AsyncWebServer& server) {
     DEBUG("LittleFS not mounted");
   }
 
-  server.serveStatic("/", LittleFS, "/");
+  // Avoid stale UI assets after LittleFS updates.
+  auto& staticHandler = server.serveStatic("/", LittleFS, "/");
+  staticHandler.setDefaultFile("index.html");
+  staticHandler.setCacheControl("no-cache, no-store, must-revalidate");
 
   server.on("/", HTTP_GET, [](AsyncWebServerRequest* request) {
     if (!fs_ok) {

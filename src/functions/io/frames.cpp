@@ -34,7 +34,13 @@ void Gen1_frames20() {
   case MODE_6040:
     appliedTorque = get_lock_target_adjusted_value(0x22, false);
     break;
-  case MODE_7525:
+  case MODE_7030:
+    appliedTorque = get_lock_target_adjusted_value(0x50, false);
+    break;
+  case MODE_8020:
+    appliedTorque = get_lock_target_adjusted_value(0x50, false);
+    break;
+  case MODE_9010:
     appliedTorque = get_lock_target_adjusted_value(0x50, false);
     break;
   default:

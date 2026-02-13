@@ -186,7 +186,7 @@ static void performCheck() {
 
 static bool downloadAndUpdate(const String& url, int updateCommand, const char* stage) {
   if (url.length() == 0) {
-    Serial.println("OTA: missing URL");
+    LOG_ERROR("ota", "missing URL");
     return false;
   }
 
@@ -198,16 +198,16 @@ static bool downloadAndUpdate(const String& url, int updateCommand, const char* 
   http.setFollowRedirects(HTTPC_STRICT_FOLLOW_REDIRECTS);
   http.setRedirectLimit(3);
 
-  Serial.println(String("OTA: GET ") + url);
+  LOG_INFO("ota", "GET %s", url.c_str());
   if (!http.begin(client, url)) {
-    Serial.println("OTA: http.begin failed");
+    LOG_ERROR("ota", "http.begin failed");
     return false;
   }
 
   int code = http.GET();
-  Serial.println(String("OTA: HTTP ") + code);
+  LOG_INFO("ota", "HTTP %d", code);
   if (code != 200) {
-    Serial.println(String("OTA: HTTP error ") + http.errorToString(code));
+    LOG_ERROR("ota", "HTTP error %s", http.errorToString(code).c_str());
     http.end();
     return false;
   }
@@ -215,13 +215,13 @@ static bool downloadAndUpdate(const String& url, int updateCommand, const char* 
   int len = http.getSize();
   uint32_t total = len > 0 ? (uint32_t)len : 0;
   if (len > 0) {
-    Serial.println(String("OTA: size ") + len + " bytes");
+    LOG_INFO("ota", "size %d bytes", len);
   } else {
-    Serial.println("OTA: size unknown");
+    LOG_INFO("ota", "size unknown");
   }
 
   if (!Update.begin(len > 0 ? (size_t)len : UPDATE_SIZE_UNKNOWN, updateCommand)) {
-    Serial.println(String("OTA: Update.begin failed ") + Update.errorString());
+    LOG_ERROR("ota", "Update.begin failed %s", Update.errorString());
     http.end();
     return false;
   }
@@ -246,7 +246,7 @@ static bool downloadAndUpdate(const String& url, int updateCommand, const char* 
       }
       size_t w = Update.write(buf, (size_t)read);
       if (w != (size_t)read) {
-        Serial.println(String("OTA: write failed ") + Update.errorString());
+        LOG_ERROR("ota", "write failed %s", Update.errorString());
         ok = false;
         break;
       }
@@ -263,7 +263,7 @@ static bool downloadAndUpdate(const String& url, int updateCommand, const char* 
       progressUpdate((uint32_t)written, bps);
     } else {
       if (millis() - lastDataMs > kOtaTimeoutMs) {
-        Serial.println("OTA: stream timeout");
+        LOG_ERROR("ota", "stream timeout");
         ok = false;
         break;
       }
@@ -274,15 +274,15 @@ static bool downloadAndUpdate(const String& url, int updateCommand, const char* 
   progressUpdate((uint32_t)written, 0.0f);
 
   if (len > 0 && written < (size_t)len) {
-    Serial.println("OTA: stream ended early");
+    LOG_ERROR("ota", "stream ended early");
     ok = false;
   }
 
   bool finished = Update.end();
   if (!finished) {
-    Serial.println(String("OTA: Update.end failed ") + Update.errorString());
+    LOG_ERROR("ota", "Update.end failed %s", Update.errorString());
   }
-  Serial.println(String("OTA: written ") + written + " bytes");
+  LOG_INFO("ota", "written %u bytes", (unsigned int)written);
   http.end();
 
   return ok && finished && Update.isFinished();

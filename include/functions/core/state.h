@@ -9,10 +9,16 @@ enum openhaldex_mode_t {
   MODE_FWD,
   MODE_5050,
   MODE_6040,
-  MODE_7525,
-  MODE_CUSTOM,
+  MODE_7030,
+  MODE_8020,
+  MODE_9010,
+  MODE_SPEED,
+  MODE_THROTTLE,
   MODE_MAP,
-  openhaldex_mode_t_MAX
+  MODE_RPM,
+  openhaldex_mode_t_MAX,
+  MODE_CUSTOM = MODE_SPEED, // legacy alias
+  MODE_7525 = MODE_7030 // legacy alias
 };
 
 struct lockpoint_t {
@@ -64,11 +70,25 @@ extern bool hasCANChassis;
 extern bool hasCANHaldex;
 extern bool broadcastOpenHaldexOverCAN;
 extern bool disableController;
+extern bool logToFileEnabled;
+extern bool logCanToFileEnabled;
+extern bool logErrorToFileEnabled;
+extern bool logSerialEnabled;
+extern bool logDebugFirmwareEnabled;
+extern bool logDebugNetworkEnabled;
+extern bool logDebugCanEnabled;
 extern bool received_report_clutch1;
 extern bool received_report_clutch2;
 extern bool received_temp_protection;
 extern bool received_coupling_open;
 extern bool received_speed_limit;
+
+bool loggingDebugCaptureActive();
+
+void mappedInputSignalsInit();
+bool mappedInputSignalsGet(String& speed, String& throttle, String& rpm, uint32_t timeout_ms = 0);
+bool mappedInputSignalsSet(const String& speed, const String& throttle, const String& rpm, uint32_t timeout_ms = 50);
+bool mappedInputSignalsConfigured();
 
 extern long lastCANChassisTick;
 extern long lastCANHaldexTick;
@@ -81,13 +101,23 @@ extern bool can1_ready;
 // Settings
 extern uint8_t disableThrottle;
 extern uint16_t disableSpeed;
+extern uint16_t disengageUnderSpeedMap;
+extern uint16_t disengageUnderSpeedSpeedMode;
+extern uint16_t disengageUnderSpeedThrottleMode;
+extern uint16_t disengageUnderSpeedRpmMode;
+extern float lockReleaseRatePctPerSec;
 
-// Custom mode arrays
-extern bool customSpeed;
-extern bool customThrottle;
-extern uint16_t speedArray[5];
-extern uint8_t throttleArray[5];
-extern uint8_t lockArray[5];
+// 1D curve mode tables
+#define CURVE_POINTS_MAX 12
+extern uint8_t speed_curve_count;
+extern uint16_t speed_curve_bins[CURVE_POINTS_MAX];
+extern uint8_t speed_curve_lock[CURVE_POINTS_MAX];
+extern uint8_t throttle_curve_count;
+extern uint8_t throttle_curve_bins[CURVE_POINTS_MAX];
+extern uint8_t throttle_curve_lock[CURVE_POINTS_MAX];
+extern uint8_t rpm_curve_count;
+extern uint16_t rpm_curve_bins[CURVE_POINTS_MAX];
+extern uint8_t rpm_curve_lock[CURVE_POINTS_MAX];
 
 // Map mode tables
 #define MAP_SPEED_BINS 9

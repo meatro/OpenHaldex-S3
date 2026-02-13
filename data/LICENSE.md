@@ -12,6 +12,10 @@ interaction design.
 Firmware, control logic, and non-UI source code remain licensed under
 their respective licenses as documented elsewhere in the repository.
 
+THE SOFTWARE NAME `OPENHALDEX-S3` AS DISPLAYED IN THE USER INTERFACE 
+IDENTIFIES THE ORIGIN OF THE UI AND MUST NOT BE ALTERED, REPLACED, OR 
+PRESENTED IN A MANNER THAT MISREPRESENTS AUTHORSHIP OR ORIGIN. THIS UI 
+MAY NOT BE PRESENTED UNDER A DIFFERENT PRODUCT NAME.
 
 1. PERMITTED USE
 

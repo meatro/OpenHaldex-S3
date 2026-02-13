@@ -41,8 +41,14 @@ void getLockData(twai_message_t& rx_message_chs) {
       case MODE_6040:
         appliedTorque = get_lock_target_adjusted_value(0x22, false); // set to ~30% lock (0x96 = 15%, 0x56 = 27%)
         break;
-      case MODE_7525:
-        appliedTorque = get_lock_target_adjusted_value(0x50, false); // set to ~30% lock (0x96 = 15%, 0x56 = 27%)
+      case MODE_7030:
+        appliedTorque = get_lock_target_adjusted_value(0x50, false); // set to ~30% lock
+        break;
+      case MODE_8020:
+        appliedTorque = get_lock_target_adjusted_value(0x50, false); // set to ~20% lock
+        break;
+      case MODE_9010:
+        appliedTorque = get_lock_target_adjusted_value(0x50, false); // set to ~10% lock
         break;
       default:
         break;

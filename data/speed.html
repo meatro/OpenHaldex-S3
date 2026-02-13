@@ -1,0 +1,207 @@
+<!--
+OpenHaldex-S3 Speed Curve UI
+&copy; 2026 SpringfieldVW.com
+Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
+-->
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>OpenHaldex-S3 | Speed Settings</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
+<body data-theme="dark" data-page="speed">
+  <div class="container">
+
+    <nav id="main-menu" class="slide-menu" aria-label="Main menu" aria-hidden="true">
+      <div class="menu-header">
+        <button type="button" class="menu-close" aria-label="Close menu">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <line x1="18" y1="6" x2="6" y2="18"/>
+            <line x1="6" y1="6" x2="18" y2="18"/>
+          </svg>
+        </button>
+        <div class="menu-brand">
+          <div class="brand-logo">OH</div>
+          <div class="brand-text">
+            <span class="brand-title">OpenHaldex-S3</span>
+            <span class="brand-subtitle">by springfieldvw.com</span>
+          </div>
+        </div>
+      </div>
+      <ul class="menu-items">
+        <li><a href="./index.html">Home</a></li>
+        <li><a href="./map.html">Map</a></li>
+        <li><a href="./speed.html">Speed Settings</a></li>
+        <li><a href="./throttle.html">Throttle Settings</a></li>
+        <li><a href="./rpm.html">RPM Settings</a></li>
+        <li><a href="./canview.html">CAN View</a></li>
+        <li><a href="./diag.html">Diagnostics</a></li>
+        <li><a href="./logs.html">Logs</a></li>
+        <li><a href="./setup.html">Setup</a></li>
+        <li><a href="./ota.html">OTA</a></li>
+        <li><a href="./help.html">Help</a></li>
+        <li><a href="./about.html">About</a></li>
+      </ul>
+    </nav>
+
+    <div class="menu-backdrop" hidden></div>
+
+    <header class="header">
+      <button type="button" class="header-btn menu-toggle" aria-label="Open menu" aria-controls="main-menu" aria-expanded="false">
+        <svg viewBox="0 0 24 24"><path d="M3 6h18M3 12h18M3 18h18" stroke="currentColor" stroke-width="2"/></svg>
+      </button>
+      <div class="header-brand">
+        <div class="brand-logo">OH</div>
+        <div class="brand-text">
+          <span class="brand-title">OpenHaldex-S3</span>
+          <span class="brand-subtitle">by springfieldvw.com</span>
+        </div>
+      </div>
+      <div class="header-icons">
+        <button type="button" class="header-btn fullscreen-toggle" aria-label="Enter fullscreen">
+          <svg class="fullscreen-icon expand-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/>
+          </svg>
+          <svg class="fullscreen-icon compress-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M8 3v3a2 2 0 0 1-2 2H3m18 0h-3a2 2 0 0 1-2-2V3m0 18v-3a2 2 0 0 1 2-2h3M3 16h3a2 2 0 0 1 2 2v3"/>
+          </svg>
+        </button>
+        <button type="button" class="header-btn theme-toggle" aria-label="Switch theme">
+          <svg class="theme-icon sun-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <circle cx="12" cy="12" r="5"/>
+            <line x1="12" y1="1" x2="12" y2="3"/>
+            <line x1="12" y1="21" x2="12" y2="23"/>
+            <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"/>
+            <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"/>
+            <line x1="1" y1="12" x2="3" y2="12"/>
+            <line x1="21" y1="12" x2="23" y2="12"/>
+            <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"/>
+            <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"/>
+          </svg>
+          <svg class="theme-icon moon-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"/>
+          </svg>
+        </button>
+        <div class="header-btn wifi-icon" role="status" aria-label="Wi-Fi connected">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round">
+            <path d="M5 12.55a11 11 0 0 1 14.08 0"/>
+            <path d="M8.5 16.5a6 6 0 0 1 7 0"/>
+            <circle cx="12" cy="20" r="1" fill="currentColor" stroke="none"/>
+          </svg>
+        </div>
+      </div>
+    </header>
+
+    <main class="page-main curve-main" aria-label="Speed curve tuning">
+      <div class="grid-container">
+        <div class="col-12">
+          <section class="ui-card curve-card" data-curve-kind="speed">
+            <div class="ui-section-head curve-head">
+              <h2>Speed Settings</h2>
+              <span id="curveLiveValue" class="curve-live">Speed: -- km/h</span>
+            </div>
+            <div class="curve-subtitle">Set requested lock by vehicle speed. Points are linearly interpolated.</div>
+            <div class="curve-toolbar">
+              <button type="button" class="ui-btn secondary" id="curveLoad">Load</button>
+              <button type="button" class="ui-btn secondary" id="curveAdd">Add Point</button>
+              <button type="button" class="ui-btn secondary" id="curveReset">Defaults</button>
+              <button type="button" class="ui-btn" id="curveSave">Save Curve</button>
+            </div>
+            <div class="curve-table-head">
+              <span>Speed Bin (km/h)</span>
+              <span>Requested Lock (%)</span>
+              <span></span>
+            </div>
+            <div id="curveRows" class="curve-rows" role="list" aria-label="Speed curve points"></div>
+            <div id="curveStatus" class="ui-status">Loading speed curve...</div>
+          </section>
+        </div>
+        <div class="col-12">
+          <section class="ui-card curve-mode-card" aria-label="Mode behavior controls">
+            <section class="curve-mode-controls">
+              <details class="ui-details curve-mode-details" data-detail="curve-mode-behavior">
+                <summary>Mode Settings</summary>
+                <div class="curve-disengage" aria-label="Low-speed disengage setting">
+                  <div class="curve-disengage-field curve-setting-field">
+                    <div class="curve-setting-head">
+                      <label for="curveDisengageSpeed">Disengage under speed (km/h)</label>
+                      <label class="ui-toggle-row curve-inline-toggle">
+                        <input id="curveEnableDisengageSpeed" type="checkbox" checked />
+                        <span>Enable</span>
+                      </label>
+                    </div>
+                    <input id="curveDisengageSpeed" class="curve-disengage-input" type="number" min="0" max="300" step="1" value="0" />
+                  </div>
+                  <button type="button" class="ui-btn secondary" id="curveDisengageSave">Save Mode Settings</button>
+                  <span class="curve-disengage-note">Use the Enable toggle to apply this gate while preserving your saved value. Full throttle bypasses it for launch control.</span>
+                </div>
+                <div class="curve-global-controls">
+                  <div class="curve-disengage-field curve-setting-field">
+                    <div class="curve-setting-head">
+                      <label for="curveDisableThrottle">Minimum throttle before lock request (%)</label>
+                      <label class="ui-toggle-row curve-inline-toggle">
+                        <input id="curveEnableThrottleGate" type="checkbox" checked />
+                        <span>Enable</span>
+                      </label>
+                    </div>
+                    <input id="curveDisableThrottle" class="curve-disengage-input" type="number" min="0" max="100" step="1" value="0" />
+                  </div>
+                  <div class="curve-disengage-field curve-setting-field">
+                    <div class="curve-setting-head">
+                      <label for="curveDisableSpeed">Disable lock above speed (km/h)</label>
+                      <label class="ui-toggle-row curve-inline-toggle">
+                        <input id="curveEnableSpeedGate" type="checkbox" checked />
+                        <span>Enable</span>
+                      </label>
+                    </div>
+                    <input id="curveDisableSpeed" class="curve-disengage-input" type="number" min="0" max="300" step="1" value="0" />
+                  </div>
+                  <div class="curve-disengage-field curve-setting-field">
+                    <div class="curve-setting-head">
+                      <label for="curveReleaseRate">Lock release ramp (%/s)</label>
+                      <label class="ui-toggle-row curve-inline-toggle">
+                        <input id="curveEnableReleaseRate" type="checkbox" checked />
+                        <span>Enable</span>
+                      </label>
+                    </div>
+                    <input id="curveReleaseRate" class="curve-disengage-input" type="number" min="0" max="1000" step="1" value="120" />
+                  </div>
+                  <label class="ui-toggle-row curve-toggle-row">
+                    <input id="curveBroadcastBridge" type="checkbox" checked />
+                    <span>Broadcast Haldex status to chassis bus</span>
+                  </label>
+                  <label class="ui-toggle-row curve-toggle-row">
+                    <input id="curveControllerEnabled" type="checkbox" checked />
+                    <span>Enable controller output</span>
+                  </label>
+                  <span class="curve-disengage-note">Global gates are shared across map/speed/throttle/rpm. Disable any gate without losing its stored value.</span>
+                </div>
+              </details>
+            </section>
+          </section>
+        </div>
+      </div>
+    </main>
+
+    <footer class="footer">
+      <div>OpenHaldex-S3 &copy; SpringfieldVW.com</div>
+      <div class="version">
+        v0.6.0
+        <span class="update-available">
+          <svg viewBox="0 0 16 16">
+            <circle cx="8" cy="8" r="7" fill="currentColor"/>
+            <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="white" stroke-width="1.5"/>
+          </svg>
+          new version available
+        </span>
+      </div>
+    </footer>
+
+  </div>
+  <script src="./app.js"></script>
+</body>
+</html>
+
+

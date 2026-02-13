@@ -1,5 +1,5 @@
 ﻿<!--
-OpenHaldex-S3 OTA UI
+OpenHaldex-S3 Logs UI
 &copy; 2026 SpringfieldVW.com
 Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 -->
@@ -8,10 +8,10 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>OpenHaldex-S3 | OTA</title>
+  <title>OpenHaldex-S3 | Logs</title>
   <link rel="stylesheet" href="./styles.css" />
 </head>
-<body data-theme="dark" data-page="ota">
+<body data-theme="dark">
   <div class="container">
 
     <!-- Slide Menu Overlay -->
@@ -95,64 +95,92 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
         </div>
       </div>
     </header>
-    <main class="page-main ota-main" aria-label="OTA and network settings">
-      <div class="grid-container">
+    <main class="page-main logs-main" aria-label="Runtime logs">
+      <div class="grid-container logs-grid">
         <div class="col-12 col-md-6">
           <section class="ui-card">
-            <div class="ui-section-head"><h2>Firmware Upload</h2></div>
-            <form id="otaForm" class="ui-stack">
-              <label class="ui-field">Select firmware .bin
-                <input type="file" id="bin" class="ui-input" accept=".bin" required />
+            <div class="ui-section-head">
+              <h2>Logging Settings</h2>
+              <span id="logSettingsStatus" class="ui-status">Loading...</span>
+            </div>
+            <div class="ui-toggle-list">
+              <label class="ui-toggle-row">
+                <input id="logEnableMaster" type="checkbox" />
+                <span>Enable Any Logging</span>
               </label>
-              <button type="submit" class="ui-btn">Upload</button>
-              <div id="status" class="ui-status">Idle</div>
-            </form>
-          </section>
-        </div>
-        <div class="col-12 col-md-6">
-          <section class="ui-card">
-            <div class="ui-section-head"><h2>Wi-Fi Settings</h2></div>
-            <div class="ui-stack ota-network-stack">
-              <details class="ui-details ota-details" data-detail="ota-sta-settings">
-                <summary>Internet / Hotspot (STA)</summary>
-                <div class="ui-stack">
-                  <label class="ui-field">Hotspot SSID <input id="wifiSsid" class="ui-input" type="text" placeholder="Hotspot SSID" /></label>
-                  <label class="ui-field">Hotspot Password <input id="wifiPass" class="ui-input" type="password" placeholder="Hotspot password" /></label>
-                  <label class="ui-check"><input id="wifiStaEnable" type="checkbox" /> Enable STA</label>
-                  <div class="ui-toolbar compact">
-                    <button id="btnWifiSaveSta" type="button" class="ui-btn">Save STA</button>
-                    <button id="btnWifiClearSta" type="button" class="ui-btn secondary">Clear STA</button>
-                  </div>
-                  <div id="wifiStaStatus" class="ui-status">No hotspot saved.</div>
-                </div>
-              </details>
-              <details class="ui-details ota-details" data-detail="ota-ap-settings">
-                <summary>Device Access Point (AP)</summary>
-                <div class="ui-stack">
-                  <label class="ui-field">Device AP Password <input id="wifiApPass" class="ui-input" type="password" placeholder="Optional (8-63 chars)" /></label>
-                  <div class="ui-status">Leave AP password blank to keep current value. Use Clear AP Password to remove it.</div>
-                  <div class="ui-toolbar compact">
-                    <button id="btnWifiSaveAp" type="button" class="ui-btn">Save AP Password</button>
-                    <button id="btnWifiClearAp" type="button" class="ui-btn secondary">Clear AP Password</button>
-                  </div>
-                  <div id="wifiApStatus" class="ui-status">AP mode status unknown.</div>
-                </div>
-              </details>
-              <div id="wifiStatus" class="ui-status">No saved network.</div>
+              <label class="ui-toggle-row">
+                <input id="logEnableCan" type="checkbox" />
+                <span>Include CAN Frames</span>
+              </label>
+              <label class="ui-toggle-row">
+                <input id="logEnableError" type="checkbox" />
+                <span>Include Errors/Events</span>
+              </label>
+              <label class="ui-toggle-row">
+                <input id="logEnableSerial" type="checkbox" />
+                <span>Enable Serial Output</span>
+              </label>
+              <label class="ui-toggle-row">
+                <input id="logDebugFirmware" type="checkbox" />
+                <span>Firmware Debug</span>
+              </label>
+              <label class="ui-toggle-row">
+                <input id="logDebugNetwork" type="checkbox" />
+                <span>Network Debug</span>
+              </label>
+              <label class="ui-toggle-row">
+                <input id="logDebugCan" type="checkbox" />
+                <span>CAN Debug</span>
+              </label>
+            </div>
+            <div class="ui-status">Any debug profile forces controller to STOCK mode for safety.</div>
+            <div class="ui-toolbar compact">
+              <button id="btnLogApply" class="ui-btn">Apply</button>
             </div>
           </section>
         </div>
-      </div>
-      <div class="grid-container">
+        <div class="col-12 col-md-6">
+          <section class="ui-card">
+            <div class="ui-section-head">
+              <h2>Log Files</h2>
+              <span id="logFileStatus" class="ui-status">Idle</span>
+            </div>
+            <div class="ui-field">
+              <label for="logFileSelect">Active File</label>
+              <select id="logFileSelect"></select>
+            </div>
+            <div class="ui-field">
+              <label for="logScopeSelect">Clear Scope</label>
+              <select id="logScopeSelect">
+                <option value="everything">Everything</option>
+                <option value="all">All Stream</option>
+                <option value="can">CAN Only</option>
+                <option value="error">Errors Only</option>
+              </select>
+            </div>
+            <div class="ui-toolbar compact">
+              <button id="btnLogRefreshList" class="ui-btn secondary">Refresh</button>
+              <button id="btnLogDelete" class="ui-btn secondary">Delete File</button>
+              <button id="btnLogClearScope" class="ui-btn secondary">Clear Scope</button>
+            </div>
+          </section>
+        </div>
         <div class="col-12">
           <section class="ui-card">
-            <div class="ui-section-head"><h2>Update Check</h2></div>
-            <div id="updateStatus" class="ui-status">Update: Checking...</div>
+            <div class="ui-section-head">
+              <h2>Runtime Logs</h2>
+              <span id="logStatus" class="ui-status">Idle</span>
+            </div>
+            <div class="ui-toolbar compact">
+              <button id="btnLogPause" class="ui-btn">Pause</button>
+              <button id="btnLogClear" class="ui-btn secondary">Clear View</button>
+              <button id="btnLogDownload" class="ui-btn">Download</button>
+            </div>
+            <pre id="logOutput" class="log-output">No logs loaded yet.</pre>
           </section>
         </div>
       </div>
     </main>
-
     <footer class="footer">
       <div>OpenHaldex-S3 &copy; SpringfieldVW.com</div>
       <div class="version">
@@ -171,6 +199,7 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
   <script src="./app.js"></script>
 </body>
 </html>
+
 
 
 

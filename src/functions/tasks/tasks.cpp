@@ -12,6 +12,7 @@
 #include "functions/io/frames.h"
 #include "functions/can/standalone_can.h"
 #include "functions/storage/storage.h"
+#include "functions/storage/filelog.h"
 
 #include "freertos/FreeRTOS.h"
 #include "freertos/task.h"
@@ -29,7 +30,6 @@ static void updateLabels(void* arg) {
     const uint32_t now = millis();
     hasCANChassis = (lastCANChassisTick > 0) && ((now - lastCANChassisTick) <= 500);
     hasCANHaldex = (lastCANHaldexTick > 0) && ((now - lastCANHaldexTick) <= 500);
-    state.mode = disableController ? MODE_STOCK : MODE_MAP;
     vTaskDelay(OH_LABEL_REFRESH_MS / portTICK_PERIOD_MS);
   }
 }
@@ -69,16 +69,29 @@ void tasksInit() {
       vTaskSuspend(handle_frames25);
       vTaskSuspend(handle_frames20);
       vTaskSuspend(handle_frames10);
+      filelogLogInfo("tasks", "Standalone disabled; generated frame tasks suspended");
     }
 
-    xTaskCreate(broadcastOpenHaldex, "broadcastOpenHaldex", 4096, NULL, 10, NULL);
-    xTaskCreate(parseCAN_hdx, "parseHaldex", 2048, NULL, 11, NULL);
-    xTaskCreate(parseCAN_chs, "parseChassis", 2048, NULL, 12, NULL);
+    xTaskCreate(broadcastOpenHaldex, "broadcastOpenHaldex", 4096, NULL, 6, NULL);
+    xTaskCreate(parseCAN_hdx, "parseHaldex", 4096, NULL, 6, NULL);
+    xTaskCreate(parseCAN_chs, "parseChassis", 4096, NULL, 7, NULL);
+    filelogLogInfo("tasks", "CAN tasks initialized");
+  } else {
+    filelogLogError("tasks", "CAN not ready; frame/parser tasks not started");
   }
 }
 
 void updateTriggers(void* arg) {
+  bool last_bus_failure = isBusFailure;
   while (1) {
+    if (isBusFailure != last_bus_failure) {
+      if (isBusFailure) {
+        filelogLogError("can", "bus failure detected");
+      } else {
+        filelogLogEvent("can", "bus recovered");
+      }
+      last_bus_failure = isBusFailure;
+    }
 
     canRecoverIfBusFailure();
 
@@ -136,7 +149,9 @@ void showHaldexState(void* arg) {
 #if detailedDebugRuntimeStats
     char buffer2[2048] = {0};
     vTaskGetRunTimeStats(buffer2);
-    Serial.println(buffer2);
+    if (filelogShouldSerialEmit("DEBUG", "debug")) {
+      Serial.println(buffer2);
+    }
 #endif
 
 #if detailedDebugCAN

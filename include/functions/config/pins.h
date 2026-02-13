@@ -5,9 +5,10 @@
 #define OH_BOARD_T2CAN 1
 #endif
 
-// MCP2515 support for T-2CAN chassis bus
-#ifndef OH_CAN_CHASSIS_MCP2515
-#define OH_CAN_CHASSIS_MCP2515 1
+// MCP2515 support for T-2CAN Haldex bus.
+// Chassis bus uses internal ESP32-S3 TWAI by default.
+#ifndef OH_CAN_HALDEX_MCP2515
+#define OH_CAN_HALDEX_MCP2515 1
 #endif
 
 #if !OH_BOARD_T2CAN
