@@ -186,16 +186,39 @@ installation, live tuning, and additional telemetry.
 
 ---
 
+## Licensing
+
+OpenHaldex-S3 is now a split-license repository.
+
+- Original OpenHaldex-S3 firmware code and MIT-upstream code remain under MIT.
+- The web UI in `data/` remains separately licensed under `data/LICENSE.md`.
+- Gen 5 support and identified OpenHaldex-C6-derived portions are distributed
+  under the Forbes Automotive Source-Available License (FASL) v1.0 and are
+  non-commercial only.
+
+If you redistribute source or binaries that include Gen 5 support, keep the
+third-party notices and the Forbes FASL text with the distribution.
+
+See:
+
+- `LICENSE`
+- `THIRD_PARTY_NOTICES.md`
+- `THIRD_PARTY_LICENSES/Forbes-Automotive-FASL-v1.0.txt`
+- `data/LICENSE.md`
+
+---
+
 ## UI Licensing Notice
 
 The web-based user interface located in the `data/` directory is licensed
 separately from the rest of the OpenHaldex-S3 project.
 
-While core firmware and control logic are released under the MIT License,
-the UI is subject to additional terms requiring visible attribution and
-restricting commercial redistribution.
+While parts of the firmware are MIT-licensed, Gen 5 / OpenHaldex-C6-derived
+portions are distributed under separate non-commercial terms, and the UI is
+subject to additional terms requiring visible attribution and restricting
+commercial redistribution.
 
-See `data/UI-LICENSE.txt` for details.
+See `data/LICENSE.md` for details.
 
 ---
 
