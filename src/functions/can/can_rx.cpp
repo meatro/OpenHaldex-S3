@@ -9,6 +9,7 @@
 #include "functions/core/calcs.h"
 #include "functions/can/can_id.h"
 #include "functions/canview/canview.h"
+#include "functions/canview/vw_mqb_chassis_dbc.h"
 #include "functions/canview/vw_pq_chassis_dbc.h"
 #include "functions/can/can_state.h"
 
@@ -39,6 +40,7 @@ struct mapped_signal_binding_t {
   mapped_bus_t bus = MAPPED_BUS_UNKNOWN;
   uint32_t frame_id = 0;
   const dbc_signal_t* signal = nullptr;
+  uint8_t generation = 0;
   bool ready = false;
 };
 
@@ -113,10 +115,20 @@ static bool parse_mapping_frame_id(const String& frame, uint32_t& out_id) {
   return true;
 }
 
+static const dbc_signal_t* active_chassis_signals() {
+  return (haldexGeneration == 5) ? k_vw_mqb_chassis_signals : k_vw_pq_chassis_signals;
+}
+
+static uint16_t active_chassis_signal_count() {
+  return (haldexGeneration == 5) ? k_vw_mqb_chassis_signal_count : k_vw_pq_chassis_signal_count;
+}
+
 static const dbc_signal_t* find_dbc_signal(uint32_t id, const String& signal_name, const String& signal_unit) {
   const dbc_signal_t* name_match = nullptr;
-  for (uint16_t i = 0; i < k_vw_pq_chassis_signal_count; i++) {
-    const dbc_signal_t* sig = &k_vw_pq_chassis_signals[i];
+  const dbc_signal_t* active_signals = active_chassis_signals();
+  const uint16_t signal_count = active_chassis_signal_count();
+  for (uint16_t i = 0; i < signal_count; i++) {
+    const dbc_signal_t* sig = &active_signals[i];
     if (sig->id != id) {
       continue;
     }
@@ -134,8 +146,10 @@ static const dbc_signal_t* find_dbc_signal(uint32_t id, const String& signal_nam
 }
 
 static const dbc_signal_t* find_mux_signal(uint32_t id) {
-  for (uint16_t i = 0; i < k_vw_pq_chassis_signal_count; i++) {
-    const dbc_signal_t* sig = &k_vw_pq_chassis_signals[i];
+  const dbc_signal_t* active_signals = active_chassis_signals();
+  const uint16_t signal_count = active_chassis_signal_count();
+  for (uint16_t i = 0; i < signal_count; i++) {
+    const dbc_signal_t* sig = &active_signals[i];
     if (sig->id == id && sig->mux == -2) {
       return sig;
     }
@@ -151,8 +165,7 @@ static bool frame_mux_matches(const dbc_signal_t* signal, const twai_message_t& 
   if (!mux_sig) {
     return false;
   }
-  const uint64_t raw =
-    vw_pq_dbc_extract_raw(frame.data, mux_sig->start_bit, mux_sig->length, mux_sig->is_little_endian);
+  const uint64_t raw = dbc_extract_raw(frame.data, mux_sig->start_bit, mux_sig->length, mux_sig->is_little_endian);
   return ((int)raw) == signal->mux;
 }
 
@@ -171,7 +184,7 @@ static bool mapping_bus_matches(mapped_bus_t bus, uint8_t bus_index) {
 
 static void refresh_binding(mapped_signal_binding_t& binding, const String& source_key_raw) {
   const String source_key = normalize_mapping_token(source_key_raw);
-  if (binding.source_key == source_key) {
+  if (binding.source_key == source_key && binding.generation == haldexGeneration) {
     return;
   }
 
@@ -179,6 +192,7 @@ static void refresh_binding(mapped_signal_binding_t& binding, const String& sour
   binding.bus = MAPPED_BUS_UNKNOWN;
   binding.frame_id = 0;
   binding.signal = nullptr;
+  binding.generation = haldexGeneration;
   binding.ready = false;
 
   if (source_key.length() == 0) {
@@ -220,7 +234,7 @@ static bool apply_binding_from_frame(const mapped_signal_binding_t& binding, con
   if (!frame_mux_matches(binding.signal, frame)) {
     return false;
   }
-  const float value = vw_pq_dbc_decode_signal(binding.signal, frame.data);
+  const float value = dbc_decode_signal(binding.signal, frame.data);
   if (!std::isfinite(value)) {
     return false;
   }
@@ -294,7 +308,7 @@ void parseCAN_chs(void* arg) {
 
       tx_msg_hdx().identifier = rx_msg_chs().identifier;
 
-      if (isGen1Standalone || isGen2Standalone || isGen4Standalone) {
+      if (isStandalone) {
         switch (rx_msg_chs().identifier) {
         case diagnostics_1_ID:
         case diagnostics_2_ID:
@@ -311,7 +325,7 @@ void parseCAN_chs(void* arg) {
         }
       }
 
-      if (!isGen1Standalone && !isGen2Standalone && !isGen4Standalone) {
+      if (!isStandalone) {
         switch (rx_msg_chs().identifier) {
         case MOTOR1_ID:
           if (!throttle_mapped_recent) {
@@ -326,7 +340,7 @@ void parseCAN_chs(void* arg) {
         case BRAKES1_ID: {
           // ABS aggregate vehicle speed (BR1_Wheel_Speed_kmh, 0.01 km/h units).
           if (!speed_mapped_recent) {
-            uint64_t raw = vw_pq_dbc_extract_raw(rx_msg_chs().data, 17, 15, 1);
+            uint64_t raw = dbc_extract_raw(rx_msg_chs().data, 17, 15, 1);
             received_vehicle_speed = (uint16_t)((raw + 50) / 100);
             vehicle_state.speed = received_vehicle_speed;
             last_abs_speed_ms = millis();
@@ -343,6 +357,48 @@ void parseCAN_chs(void* arg) {
           }
           break;
 
+        case MOTOR_04:
+          if (haldexGeneration == 5) {
+            const uint16_t mo_ladedruck_raw =
+              (uint16_t)(((uint16_t)rx_msg_chs().data[5] << 1) | (rx_msg_chs().data[4] >> 7)) & 0x01FF;
+            const int32_t boost_mbar = (int32_t)(mo_ladedruck_raw * 10.0f + 0.5f) - 1000;
+            received_vehicle_boost = (boost_mbar > 0) ? (uint16_t)boost_mbar : 0;
+          }
+          break;
+
+        case MOTOR_20:
+          if (haldexGeneration == 5 && !throttle_mapped_recent) {
+            received_pedal_value = ((rx_msg_chs().data[1] >> 4) | ((rx_msg_chs().data[2] & 0x0F) << 4)) * 0.4f;
+            vehicle_state.throttle = received_pedal_value;
+          }
+          break;
+
+        case ESP_19:
+          if (haldexGeneration == 5 && !speed_mapped_recent) {
+            const uint16_t wheel_speed_hl_raw = (uint16_t)((rx_msg_chs().data[1] << 8) | rx_msg_chs().data[0]);
+            const uint16_t wheel_speed_hr_raw = (uint16_t)((rx_msg_chs().data[3] << 8) | rx_msg_chs().data[2]);
+            const uint16_t wheel_speed_vl_raw = (uint16_t)((rx_msg_chs().data[5] << 8) | rx_msg_chs().data[4]);
+            const uint16_t wheel_speed_vr_raw = (uint16_t)((rx_msg_chs().data[7] << 8) | rx_msg_chs().data[6]);
+            const float average_wheel_speed =
+              (wheel_speed_hl_raw + wheel_speed_hr_raw + wheel_speed_vl_raw + wheel_speed_vr_raw) * (0.0075f / 4.0f);
+
+            received_vehicle_speed = (uint16_t)(average_wheel_speed + 0.5f);
+            vehicle_state.speed = received_vehicle_speed;
+            last_abs_speed_ms = millis();
+            abs_speed_valid = true;
+          }
+          break;
+
+        case ESP_21:
+          if (haldexGeneration == 5 && !speed_mapped_recent &&
+              (!abs_speed_valid || (millis() - last_abs_speed_ms) > k_abs_speed_timeout_ms)) {
+            received_vehicle_speed = (uint16_t)((((rx_msg_chs().data[5] << 8) | rx_msg_chs().data[4]) * 0.01f) + 0.5f);
+            vehicle_state.speed = received_vehicle_speed;
+            last_abs_speed_ms = millis();
+            abs_speed_valid = true;
+          }
+          break;
+
         case OPENHALDEX_EXTERNAL_CONTROL_ID:
           // External mode messages are intentionally ignored for mode selection.
           // Main UI/API configuration is authoritative.
@@ -354,7 +410,7 @@ void parseCAN_chs(void* arg) {
 
         // STOCK: bridge unchanged. MAP: mutate known control frames for selected generation.
         if (state.mode != MODE_STOCK) {
-          if (haldexGeneration == 1 || haldexGeneration == 2 || haldexGeneration == 4) {
+          if (haldexGeneration == 1 || haldexGeneration == 2 || haldexGeneration == 4 || haldexGeneration == 5) {
             getLockData(rx_msg_chs());
             generatedFrame = !can_messages_equal(original, rx_msg_chs());
           }
@@ -433,21 +489,29 @@ void parseCAN_hdx(void* arg) {
       }
 
       // Engagement extraction is generation-specific and follows legacy OpenHaldex behavior.
-      if (haldexGeneration == 1) {
-        received_haldex_engagement_raw = rx_msg_hdx().data[1];
-        received_haldex_engagement = map(received_haldex_engagement_raw, 128, 198, 0, 100);
-      }
+      if (haldexGeneration == 5) {
+        if (rx_msg_hdx().identifier == HALDEX_ID_GEN5) {
+          received_haldex_engagement_raw = rx_msg_hdx().data[2];
+          received_haldex_engagement = map(received_haldex_engagement_raw, 0, 250, 0, 100);
+          received_haldex_state = rx_msg_hdx().data[3];
+        }
+      } else {
+        if (haldexGeneration == 1) {
+          received_haldex_engagement_raw = rx_msg_hdx().data[1];
+          received_haldex_engagement = map(received_haldex_engagement_raw, 128, 198, 0, 100);
+        }
 
-      if (haldexGeneration == 2) {
-        received_haldex_engagement_raw = rx_msg_hdx().data[1] + rx_msg_hdx().data[4];
-        received_haldex_engagement = map(received_haldex_engagement_raw, 128, 255, 0, 100);
-      }
+        if (haldexGeneration == 2) {
+          received_haldex_engagement_raw = rx_msg_hdx().data[1] + rx_msg_hdx().data[4];
+          received_haldex_engagement = map(received_haldex_engagement_raw, 128, 255, 0, 100);
+        }
 
-      if (haldexGeneration == 4) {
-        received_haldex_engagement_raw = rx_msg_hdx().data[1];
-        received_haldex_engagement = map(received_haldex_engagement_raw, 128, 255, 0, 100);
+        if (haldexGeneration == 4) {
+          received_haldex_engagement_raw = rx_msg_hdx().data[1];
+          received_haldex_engagement = map(received_haldex_engagement_raw, 128, 255, 0, 100);
+        }
+        received_haldex_state = rx_msg_hdx().data[0];
       }
-      received_haldex_state = rx_msg_hdx().data[0];
       awd_state.actual = received_haldex_engagement;
 
       received_report_clutch1 = (received_haldex_state & (1 << 0));

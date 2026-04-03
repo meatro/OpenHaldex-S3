@@ -1,4 +1,6 @@
 #include "functions/canview/canview.h"
+#include "functions/can/can_id.h"
+#include "functions/canview/vw_mqb_chassis_dbc.h"
 #include "functions/canview/vw_pq_chassis_dbc.h"
 #include "functions/core/state.h"
 #include "functions/storage/filelog.h"
@@ -168,6 +170,14 @@ static bool canview_find_frame(uint32_t id, const canview_frame_t* cache, uint8_
   return false;
 }
 
+static const dbc_signal_t* canview_active_chassis_signals() {
+  return (haldexGeneration == 5) ? k_vw_mqb_chassis_signals : k_vw_pq_chassis_signals;
+}
+
+static uint16_t canview_active_chassis_signal_count() {
+  return (haldexGeneration == 5) ? k_vw_mqb_chassis_signal_count : k_vw_pq_chassis_signal_count;
+}
+
 bool canviewGetLastTxFrame(uint8_t bus, uint32_t id, canview_last_tx_t& out) {
   out.found = false;
   out.generated = false;
@@ -196,8 +206,10 @@ bool canviewGetLastTxFrame(uint8_t bus, uint32_t id, canview_last_tx_t& out) {
   return true;
 }
 static const dbc_signal_t* canview_find_mux_signal(uint32_t id) {
-  for (uint16_t i = 0; i < k_vw_pq_chassis_signal_count; i++) {
-    const dbc_signal_t* sig = &k_vw_pq_chassis_signals[i];
+  const dbc_signal_t* active_signals = canview_active_chassis_signals();
+  const uint16_t active_signal_count = canview_active_chassis_signal_count();
+  for (uint16_t i = 0; i < active_signal_count; i++) {
+    const dbc_signal_t* sig = &active_signals[i];
     if (sig->id == id && sig->mux == -2) {
       return sig;
     }
@@ -233,7 +245,7 @@ static int canview_get_mux_value(uint32_t id, const canview_frame_t& frame, bool
   if (!mux_sig) {
     return 0;
   }
-  uint64_t raw = vw_pq_dbc_extract_raw(frame.data, mux_sig->start_bit, mux_sig->length, mux_sig->is_little_endian);
+  uint64_t raw = dbc_extract_raw(frame.data, mux_sig->start_bit, mux_sig->length, mux_sig->is_little_endian);
   ok = true;
   return (int)raw;
 }
@@ -251,10 +263,12 @@ String canviewBuildJson(uint16_t decoded_limit, uint8_t raw_limit, const String&
   busFilter.toLowerCase();
   bool want_chassis = (busFilter.length() == 0 || busFilter == "all" || busFilter == "chassis");
   bool want_haldex = (busFilter.length() == 0 || busFilter == "all" || busFilter == "haldex");
+  const dbc_signal_t* active_signals = canview_active_chassis_signals();
+  const uint16_t active_signal_count = canview_active_chassis_signal_count();
 
   auto append_chassis = [&](const canview_frame_t* cache, uint8_t cache_size, const char* bus, const char* dir) {
-    for (uint16_t i = 0; i < k_vw_pq_chassis_signal_count && decoded_count < decoded_limit; i++) {
-      const dbc_signal_t* sig = &k_vw_pq_chassis_signals[i];
+    for (uint16_t i = 0; i < active_signal_count && decoded_count < decoded_limit; i++) {
+      const dbc_signal_t* sig = &active_signals[i];
       canview_frame_t frame;
       if (!canview_find_frame(sig->id, cache, cache_size, frame)) {
         continue;
@@ -270,7 +284,7 @@ String canviewBuildJson(uint16_t decoded_limit, uint8_t raw_limit, const String&
         }
       }
 
-      float value = vw_pq_dbc_decode_signal(sig, frame.data);
+      float value = dbc_decode_signal(sig, frame.data);
       if (!isfinite(value))
         value = 0.0f;
       if (decoded_count > 0) {
@@ -295,16 +309,16 @@ String canviewBuildJson(uint16_t decoded_limit, uint8_t raw_limit, const String&
   };
 
   auto append_haldex_known = [&](const canview_frame_t* cache, uint8_t cache_size, const char* bus, const char* dir) {
-    const uint32_t HALDEX_STATUS_ID = 0x704;
+    const uint32_t haldex_status_id = (haldexGeneration == 5) ? HALDEX_ID_GEN5 : 0x704;
     canview_frame_t hframe;
-    if (!canview_find_frame(HALDEX_STATUS_ID, cache, cache_size, hframe)) {
+    if (!canview_find_frame(haldex_status_id, cache, cache_size, hframe)) {
       return;
     }
     if ((now - hframe.ts) > CANVIEW_STALE_MS) {
       return;
     }
-    uint8_t state = hframe.data[0];
-    uint16_t raw = hframe.data[1];
+    uint8_t state = (haldexGeneration == 5) ? hframe.data[3] : hframe.data[0];
+    uint16_t raw = (haldexGeneration == 5) ? hframe.data[2] : hframe.data[1];
     if (haldexGeneration == 2) {
       raw = (uint16_t)(hframe.data[1] + hframe.data[4]);
     }

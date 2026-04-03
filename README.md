@@ -7,7 +7,9 @@
 **Lift seat -> plug in -> done.**  
 No jacks. No harness. No permanent changes.
 
-OpenHaldex-S3 is a **map-driven AWD controller** for Gen 1, 2, and 4 Haldex-equipped VW and transverse Audi vehicles.
+OpenHaldex-S3 is a **map-driven AWD controller** for Gen 1, 2, 4, and now **Gen 5** Haldex-equipped VW and transverse Audi vehicles.
+
+Gen 5 support is a major milestone for this project because it opens the door to a much larger MQB-based vehicle market than the older PQ-only generations.
 
 It is intentionally inexpensive, fast to install, and brutally simple.
 
@@ -70,6 +72,20 @@ Total cost is under **$50**.
 ## Firmware installation
 
 Firmware installation is only required once. All updates after that are performed **over-the-air** through the control panel. OTA checks `https://www.springfieldvw.com/openhaldex-s3/version.json` and installs both firmware + LittleFS when available.
+
+---
+
+## Gen 5 / MQB support
+
+OpenHaldex-S3 now includes **Gen 5 Haldex support**.
+
+That matters because Gen 5 cars do **not** use the older PQ chassis CAN layout. They use **MQB**, and the firmware now reflects that:
+
+- Gen 5 can be selected directly in Setup.
+- CAN View decodes **MQB** chassis traffic when Gen 5 is selected.
+- Mapped inputs for speed, throttle, and RPM resolve against the **MQB DBC**, not the PQ DBC.
+- Gen 5 Haldex status/engagement decoding is included.
+- Gen 5 standalone/bridge frame generation has been ported in with the required counters and checksums.
 
 ---
 
@@ -189,6 +205,10 @@ This section tracks engineering-level changes made during the S3 port and stabil
 
 ### Latest Rolling Updates (Current Working Tree)
 
+- Added **Gen 5 Haldex support** across controller logic, API, setup UI, frame generation, and chassis/Haldex receive paths.
+- Added **MQB DBC support** alongside the existing PQ decoder.
+- Switched CAN View and mapped-input decoding to use **MQB** automatically when Gen 5 is selected.
+- Added shared DBC decode helpers so PQ and MQB signal tables use the same extraction/decode path.
 - Unified runtime UI script surface on `data/app.js` (all firmware UI pages now load one shared controller file).
 - Retired legacy `data/scripts.js` page dependency and folded route-specific UI controllers into the shared app runtime.
 - Extended mode-behavior controls on `map/speed/throttle/rpm` pages with explicit per-setting enable toggles:
@@ -231,6 +251,11 @@ This section tracks engineering-level changes made during the S3 port and stabil
   - payload bytes
   - generated/bridged classification
   - frame age
+- Added Gen 5/MQB chassis receive handling for:
+  - boost
+  - throttle
+  - wheel-speed derived vehicle speed
+  - Gen 5 Haldex engagement/state decode on the Haldex bus
 
 ### Controller/Map Logic
 
@@ -298,6 +323,9 @@ This section tracks engineering-level changes made during the S3 port and stabil
 - Added 30-second downloadable capture workflow via `/api/canview/dump` with bus filter support.
 - Added diagnostic preset dropdown that appends known tokens into the same space-delimited filter input.
 - Added safe capture mode toggle that temporarily locks runtime behavior for repeatable diagnostics.
+- Added DBC-driven chassis decode selection by Haldex generation:
+  - PQ for legacy generations
+  - MQB for Gen 5
 
 ### Diagnostics Improvements
 

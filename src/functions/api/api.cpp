@@ -385,7 +385,7 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
 
   if (doc.containsKey("haldexGeneration")) {
     int g = doc["haldexGeneration"];
-    if (g == 1 || g == 2 || g == 4) {
+    if (g == 1 || g == 2 || g == 4 || g == 5) {
       haldex_generation_set = true;
       next_haldex_generation = (uint8_t)g;
     }

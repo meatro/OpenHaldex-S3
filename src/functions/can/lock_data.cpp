@@ -192,4 +192,300 @@ void getLockData(twai_message_t& rx_message_chs) {
       break;
     }
   }
+
+  // Gen5 strategy: MQB byte shaping plus AUTOSAR checksum/counter maintenance.
+  if (haldexGeneration == 5) {
+    switch (rx_message_chs.identifier) {
+    case ESP_19:
+      rx_message_chs.data[0] = get_lock_target_adjusted_value(ESP_19_counter2, false);
+      rx_message_chs.data[1] = get_lock_target_adjusted_value(ESP_19_counter, false);
+      rx_message_chs.data[2] = get_lock_target_adjusted_value(ESP_19_counter2, false);
+      rx_message_chs.data[3] = get_lock_target_adjusted_value(ESP_19_counter, false);
+      rx_message_chs.data[4] = get_lock_target_adjusted_value((uint8_t)(ESP_19_counter2 + 0xCA), false);
+      rx_message_chs.data[5] = get_lock_target_adjusted_value(ESP_19_counter, false);
+      rx_message_chs.data[6] = get_lock_target_adjusted_value((uint8_t)(ESP_19_counter2 + 0xCA), false);
+      rx_message_chs.data[7] = get_lock_target_adjusted_value(ESP_19_counter, false);
+      ESP_19_counter++;
+      ESP_19_counter2++;
+      if (ESP_19_counter > 0x1A) {
+        ESP_19_counter = 0x01;
+      }
+      if (ESP_19_counter2 > 0x0E) {
+        ESP_19_counter2 = 0x00;
+      }
+      break;
+
+    case MOTOR_12:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = MOTOR_12_counter;
+      rx_message_chs.data[2] = 0x00;
+      rx_message_chs.data[3] = 0x00;
+      rx_message_chs.data[4] = 0x00;
+      rx_message_chs.data[5] = 0x64;
+      rx_message_chs.data[6] = 0x0F;
+      rx_message_chs.data[7] = get_lock_target_adjusted_value(MOTOR_12_counter, false);
+      rx_message_chs.data[0] = calcChecksum(rx_message_chs.data, ID_SEQ_0A8);
+      MOTOR_12_counter++;
+      if (MOTOR_12_counter > 0x7F) {
+        MOTOR_12_counter = 0x70;
+      }
+      break;
+
+    case MOTOR_11:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = MOTOR_11_counter;
+      rx_message_chs.data[2] = 0xFA;
+      rx_message_chs.data[3] = 0xFA;
+      rx_message_chs.data[4] = 0x00;
+      rx_message_chs.data[5] = 0xFA;
+      rx_message_chs.data[6] = get_lock_target_adjusted_value(0xFA, false);
+      rx_message_chs.data[7] = get_lock_target_adjusted_value(0xFA, false);
+      rx_message_chs.data[0] = calcChecksum(rx_message_chs.data, ID_SEQ_0A7);
+      MOTOR_11_counter++;
+      if (MOTOR_11_counter > 0x4F) {
+        MOTOR_11_counter = 0x40;
+      }
+      break;
+
+    case ESP_14:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = ESP_14_counter;
+      rx_message_chs.data[2] = 0x00;
+      rx_message_chs.data[3] = 0x00;
+      rx_message_chs.data[4] = 0x00;
+      rx_message_chs.data[5] = 0x00;
+      rx_message_chs.data[6] = 0x00;
+      rx_message_chs.data[7] = get_lock_target_adjusted_value(0xFE, false);
+      rx_message_chs.data[0] = calcChecksum(rx_message_chs.data, ID_SEQ_08A);
+      ESP_14_counter++;
+      if (ESP_14_counter > 0x1F) {
+        ESP_14_counter = 0x10;
+      }
+      break;
+
+    case ESP_10:
+      rx_message_chs.data_length_code = 8;
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = ESP_10_counter;
+      rx_message_chs.data[2] = 0x01;
+      rx_message_chs.data[3] = 0x04;
+      rx_message_chs.data[4] = 0x00;
+      rx_message_chs.data[5] = 0x40;
+      rx_message_chs.data[6] = 0x00;
+      rx_message_chs.data[7] = get_lock_target_adjusted_value(ESP_10_counter, false);
+      rx_message_chs.data[0] = calcChecksum(rx_message_chs.data, ID_SEQ_116);
+      ESP_10_counter++;
+      if (ESP_10_counter > 0x0F) {
+        ESP_10_counter = 0x00;
+      }
+      break;
+
+    case ESP_05:
+      rx_message_chs.data_length_code = 8;
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = ESP_05_counter;
+      rx_message_chs.data[2] = 0x64;
+      rx_message_chs.data[3] = 0xC0;
+      rx_message_chs.data[4] = 0x00;
+      rx_message_chs.data[5] = 0x00;
+      rx_message_chs.data[6] = 0xFD;
+      rx_message_chs.data[7] = 0x00;
+      rx_message_chs.data[0] = calcChecksum(rx_message_chs.data, ID_SEQ_106);
+      ESP_05_counter++;
+      if (ESP_05_counter > 0x8F) {
+        ESP_05_counter = 0x80;
+      }
+      break;
+
+    case KOMBI_01:
+      rx_message_chs.data[0] = 0x10;
+      rx_message_chs.data[1] = 0x20;
+      rx_message_chs.data[2] = 0x02;
+      rx_message_chs.data[3] = 0x00;
+      rx_message_chs.data[4] = 0x0C;
+      rx_message_chs.data[5] = 0x00;
+      rx_message_chs.data[6] = 0x00;
+      rx_message_chs.data[7] = 0x24;
+      break;
+
+    case ESP_23:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = ESP_23_counter;
+      rx_message_chs.data[2] = 0xBF;
+      rx_message_chs.data[3] = 0x7F;
+      rx_message_chs.data[4] = 0x00;
+      rx_message_chs.data[5] = 0x00;
+      rx_message_chs.data[6] = 0x7C;
+      rx_message_chs.data[7] = 0x78;
+      rx_message_chs.data[0] = calcChecksum(rx_message_chs.data, ID_SEQ_5BE);
+      ESP_23_counter++;
+      if (ESP_23_counter > 0x1F) {
+        ESP_23_counter = 0x00;
+      }
+      break;
+
+    case Parkhilfe_04:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = 0x00;
+      rx_message_chs.data[2] = 0x00;
+      rx_message_chs.data[3] = 0x00;
+      rx_message_chs.data[4] = 0x00;
+      rx_message_chs.data[5] = 0x00;
+      rx_message_chs.data[6] = 0x00;
+      rx_message_chs.data[7] = 0x24;
+      break;
+
+    case GATEWAY_72:
+      rx_message_chs.data[0] = 0x50;
+      rx_message_chs.data[1] = 0x80;
+      rx_message_chs.data[2] = 0x00;
+      rx_message_chs.data[3] = 0x00;
+      rx_message_chs.data[4] = 0x05;
+      rx_message_chs.data[5] = 0x10;
+      rx_message_chs.data[6] = 0x01;
+      rx_message_chs.data[7] = 0x78;
+      break;
+
+    case GETRIEBE_14:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = 0x00;
+      rx_message_chs.data[2] = 0x54;
+      rx_message_chs.data[3] = 0x24;
+      rx_message_chs.data[4] = 0x00;
+      rx_message_chs.data[5] = 0x60;
+      rx_message_chs.data[6] = 0x01;
+      rx_message_chs.data[7] = 0x51;
+      break;
+
+    case MOTOR_14:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = MOTOR_14_counter;
+      rx_message_chs.data[2] = 0xE6;
+      rx_message_chs.data[3] = 0x01;
+      rx_message_chs.data[4] = 0xC8;
+      rx_message_chs.data[5] = 0x80;
+      rx_message_chs.data[6] = 0x00;
+      rx_message_chs.data[7] = 0x80;
+      rx_message_chs.data[0] = calcChecksum(rx_message_chs.data, ID_SEQ_3BE);
+      MOTOR_14_counter++;
+      if (MOTOR_14_counter > 0x1F) {
+        MOTOR_14_counter = 0x10;
+      }
+      break;
+
+    case ESP_07:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = ESP_07_counter;
+      rx_message_chs.data[2] = 0x00;
+      rx_message_chs.data[3] = 0x00;
+      rx_message_chs.data[4] = 0x00;
+      rx_message_chs.data[5] = 0x00;
+      rx_message_chs.data[6] = 0x00;
+      rx_message_chs.data[7] = 0x00;
+      rx_message_chs.data[0] = calcChecksum(rx_message_chs.data, ID_SEQ_392);
+      ESP_07_counter++;
+      if (ESP_07_counter > 0x1F) {
+        ESP_07_counter = 0x00;
+      }
+      break;
+
+    case ESP_29:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = 0x20;
+      rx_message_chs.data[2] = 0x59;
+      rx_message_chs.data[3] = 0x00;
+      rx_message_chs.data[4] = 0x00;
+      rx_message_chs.data[5] = 0x00;
+      rx_message_chs.data[6] = 0x00;
+      rx_message_chs.data[7] = 0x00;
+      break;
+
+    case MOTOR_07:
+      rx_message_chs.data[0] = 0xA0;
+      rx_message_chs.data[1] = 0x5A;
+      rx_message_chs.data[2] = 0x56;
+      rx_message_chs.data[3] = 0xA3;
+      rx_message_chs.data[4] = 0x80;
+      rx_message_chs.data[5] = 0xA0;
+      rx_message_chs.data[6] = 0x59;
+      rx_message_chs.data[7] = 0x01;
+      break;
+
+    case CHARISMA_01:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = 0x00;
+      rx_message_chs.data[2] = 0x22;
+      rx_message_chs.data[3] = 0x02;
+      rx_message_chs.data[4] = 0x02;
+      rx_message_chs.data[5] = 0x20;
+      rx_message_chs.data[6] = 0x02;
+      rx_message_chs.data[7] = 0x02;
+      break;
+
+    case SYSTEMINFO_01:
+      rx_message_chs.data[0] = 0x84;
+      rx_message_chs.data[1] = 0x3C;
+      rx_message_chs.data[2] = 0x00;
+      rx_message_chs.data[3] = 0x7F;
+      rx_message_chs.data[4] = 0x14;
+      rx_message_chs.data[5] = 0x00;
+      rx_message_chs.data[6] = 0x00;
+      rx_message_chs.data[7] = 0x00;
+      break;
+
+    case MOTOR_CODE_01:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = MOTOR_CODE_01_counter;
+      rx_message_chs.data[2] = 0x2B;
+      rx_message_chs.data[3] = 0x53;
+      rx_message_chs.data[4] = 0x14;
+      rx_message_chs.data[5] = 0x14;
+      rx_message_chs.data[6] = 0xD7;
+      rx_message_chs.data[7] = 0x24;
+      rx_message_chs.data[0] = calcChecksum(rx_message_chs.data, ID_SEQ_641);
+      MOTOR_CODE_01_counter++;
+      if (MOTOR_CODE_01_counter > 0x1F) {
+        MOTOR_CODE_01_counter = 0x10;
+      }
+      break;
+
+    case ESP_20:
+      rx_message_chs.data[0] = 0x00;
+      rx_message_chs.data[1] = ESP_20_counter;
+      rx_message_chs.data[2] = 0x2B;
+      rx_message_chs.data[3] = 0x10;
+      rx_message_chs.data[4] = 0x00;
+      rx_message_chs.data[5] = 0x00;
+      rx_message_chs.data[6] = 0xE2;
+      rx_message_chs.data[7] = 0x79;
+      rx_message_chs.data[0] = calcChecksum(rx_message_chs.data, ID_SEQ_65D);
+      ESP_20_counter++;
+      if (ESP_20_counter > 0x3F) {
+        ESP_20_counter = 0x30;
+      }
+      break;
+
+    case DIAGNOSE_01:
+      rx_message_chs.data[0] = 0x30;
+      rx_message_chs.data[1] = 0x4D;
+      rx_message_chs.data[2] = 0x58;
+      rx_message_chs.data[3] = 0xA2;
+      rx_message_chs.data[4] = 0x89;
+      rx_message_chs.data[5] = 0x85;
+      rx_message_chs.data[6] = 0x3F;
+      rx_message_chs.data[7] = 0x30;
+      break;
+
+    case KOMBI_02:
+      rx_message_chs.data[0] = 0x4D;
+      rx_message_chs.data[1] = 0x58;
+      rx_message_chs.data[2] = 0xF2;
+      rx_message_chs.data[3] = 0xEE;
+      rx_message_chs.data[4] = 0x04;
+      rx_message_chs.data[5] = 0x2B;
+      rx_message_chs.data[6] = 0x00;
+      rx_message_chs.data[7] = 0x78;
+      break;
+    }
+  }
 }

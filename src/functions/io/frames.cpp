@@ -589,3 +589,332 @@ void Gen4_frames1000() {
     mDiagnose_1_counter = 0;
   }
 }
+
+void Gen5_frames10() {
+  twai_message_t frame = {};
+  frame.identifier = ESP_18;
+  frame.data_length_code = 8;
+  frame.data[1] = 0xC0;
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = ESP_19;
+  frame.data_length_code = 8;
+  frame.data[0] = get_lock_target_adjusted_value(ESP_19_counter2, false);
+  frame.data[1] = get_lock_target_adjusted_value(ESP_19_counter, false);
+  frame.data[2] = get_lock_target_adjusted_value(ESP_19_counter2, false);
+  frame.data[3] = get_lock_target_adjusted_value(ESP_19_counter, false);
+  frame.data[4] = get_lock_target_adjusted_value((uint8_t)(ESP_19_counter2 + 0xCA), false);
+  frame.data[5] = get_lock_target_adjusted_value(ESP_19_counter, false);
+  frame.data[6] = get_lock_target_adjusted_value((uint8_t)(ESP_19_counter2 + 0xCA), false);
+  frame.data[7] = get_lock_target_adjusted_value(ESP_19_counter, false);
+  haldex_can_send(frame, 0);
+  ESP_19_counter++;
+  ESP_19_counter2++;
+  if (ESP_19_counter > 0x1A) {
+    ESP_19_counter = 0x01;
+  }
+  if (ESP_19_counter2 > 0x0E) {
+    ESP_19_counter2 = 0x00;
+  }
+
+  frame = {};
+  frame.identifier = GETRIEBE_11;
+  frame.data_length_code = 8;
+  frame.data[1] = GETRIEBE_11_counter;
+  frame.data[3] = 0xFE;
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_0AD);
+  GETRIEBE_11_counter++;
+  if (GETRIEBE_11_counter > 0x0F) {
+    GETRIEBE_11_counter = 0;
+  }
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = MOTOR_12;
+  frame.data_length_code = 8;
+  frame.data[1] = MOTOR_12_counter;
+  frame.data[5] = 0x64;
+  frame.data[6] = 0x0F;
+  frame.data[7] = get_lock_target_adjusted_value(MOTOR_12_counter, false);
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_0A8);
+  MOTOR_12_counter++;
+  if (MOTOR_12_counter > 0x7F) {
+    MOTOR_12_counter = 0x70;
+  }
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = MOTOR_11;
+  frame.data_length_code = 8;
+  frame.data[1] = MOTOR_11_counter;
+  frame.data[2] = 0xFA;
+  frame.data[3] = 0xFA;
+  frame.data[5] = 0xFA;
+  frame.data[6] = get_lock_target_adjusted_value(0xFA, false);
+  frame.data[7] = get_lock_target_adjusted_value(0xFA, false);
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_0A7);
+  MOTOR_11_counter++;
+  if (MOTOR_11_counter > 0x4F) {
+    MOTOR_11_counter = 0x40;
+  }
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = ESP_14;
+  frame.data_length_code = 8;
+  frame.data[1] = ESP_14_counter;
+  frame.data[7] = get_lock_target_adjusted_value(0xFE, false);
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_08A);
+  ESP_14_counter++;
+  if (ESP_14_counter > 0x1F) {
+    ESP_14_counter = 0x10;
+  }
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = LWI_01;
+  frame.data_length_code = 8;
+  frame.data[1] = LWI_01_counter;
+  frame.data[2] = 0x01;
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_086);
+  LWI_01_counter++;
+  if (LWI_01_counter > 0x1F) {
+    LWI_01_counter = 0x10;
+  }
+  haldex_can_send(frame, 0);
+}
+
+void Gen5_frames20() {
+  twai_message_t frame = {};
+  frame.identifier = MOTOR_20;
+  frame.data_length_code = 8;
+  frame.data[1] = MOTOR_20_counter;
+  frame.data[2] = 0x40;
+  frame.data[3] = 0x40;
+  frame.data[4] = 0x19;
+  frame.data[5] = 0x59;
+  frame.data[6] = 0x7E;
+  frame.data[7] = 0xFE;
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_121);
+  MOTOR_20_counter++;
+  if (MOTOR_20_counter > 0x0F) {
+    MOTOR_20_counter = 0x00;
+  }
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = ESP_10;
+  frame.data_length_code = 8;
+  frame.data[1] = ESP_10_counter;
+  frame.data[2] = 0x01;
+  frame.data[3] = 0x04;
+  frame.data[5] = 0x40;
+  frame.data[7] = get_lock_target_adjusted_value(ESP_10_counter, false);
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_116);
+  ESP_10_counter++;
+  if (ESP_10_counter > 0x0F) {
+    ESP_10_counter = 0x00;
+  }
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = ESP_05;
+  frame.data_length_code = 8;
+  frame.data[1] = ESP_05_counter;
+  frame.data[2] = 0x64;
+  frame.data[3] = 0xC0;
+  frame.data[6] = 0xFD;
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_106);
+  ESP_05_counter++;
+  if (ESP_05_counter > 0x8F) {
+    ESP_05_counter = 0x80;
+  }
+  haldex_can_send(frame, 0);
+}
+
+void Gen5_frames25() {
+  twai_message_t frame = {};
+  frame.identifier = KOMBI_01;
+  frame.data_length_code = 8;
+  frame.data[0] = 0x10;
+  frame.data[1] = 0x20;
+  frame.data[2] = 0x02;
+  frame.data[4] = 0x0C;
+  frame.data[7] = 0x24;
+  haldex_can_send(frame, 0);
+}
+
+void Gen5_frames100() {
+  twai_message_t frame = {};
+  frame.identifier = ESP_23;
+  frame.data_length_code = 8;
+  frame.data[1] = ESP_23_counter;
+  frame.data[2] = 0xBF;
+  frame.data[3] = 0x7F;
+  frame.data[6] = 0x7C;
+  frame.data[7] = 0x78;
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_5BE);
+  ESP_23_counter++;
+  if (ESP_23_counter > 0x1F) {
+    ESP_23_counter = 0x00;
+  }
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = Parkhilfe_04;
+  frame.data_length_code = 8;
+  frame.data[7] = 0x24;
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = GATEWAY_72;
+  frame.data_length_code = 8;
+  frame.data[0] = 0x50;
+  frame.data[1] = 0x80;
+  frame.data[4] = 0x05;
+  frame.data[5] = 0x10;
+  frame.data[6] = 0x01;
+  frame.data[7] = 0x78;
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = GETRIEBE_14;
+  frame.data_length_code = 8;
+  frame.data[2] = 0x54;
+  frame.data[3] = 0x24;
+  frame.data[5] = 0x60;
+  frame.data[6] = 0x01;
+  frame.data[7] = 0x51;
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = MOTOR_14;
+  frame.data_length_code = 8;
+  frame.data[1] = MOTOR_14_counter;
+  frame.data[2] = 0xE6;
+  frame.data[3] = 0x01;
+  frame.data[4] = 0xC8;
+  frame.data[5] = 0x80;
+  frame.data[7] = 0x80;
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_3BE);
+  MOTOR_14_counter++;
+  if (MOTOR_14_counter > 0x1F) {
+    MOTOR_14_counter = 0x10;
+  }
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = ESP_07;
+  frame.data_length_code = 8;
+  frame.data[1] = ESP_07_counter;
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_392);
+  ESP_07_counter++;
+  if (ESP_07_counter > 0x1F) {
+    ESP_07_counter = 0x00;
+  }
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = ESP_29;
+  frame.data_length_code = 8;
+  frame.data[1] = 0x20;
+  frame.data[2] = 0x59;
+  haldex_can_send(frame, 0);
+}
+
+void Gen5_frames200() {
+  // Legacy C6 Gen5 standalone code kept the candidate 200 ms frame disabled.
+}
+
+void Gen5_frames1000() {
+  twai_message_t frame = {};
+  frame.identifier = MOTOR_07;
+  frame.data_length_code = 8;
+  frame.data[0] = 0xA0;
+  frame.data[1] = 0x5A;
+  frame.data[2] = 0x56;
+  frame.data[3] = 0xA3;
+  frame.data[4] = 0x80;
+  frame.data[5] = 0xA0;
+  frame.data[6] = 0x59;
+  frame.data[7] = 0x01;
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = CHARISMA_01;
+  frame.data_length_code = 8;
+  frame.data[2] = 0x22;
+  frame.data[3] = 0x02;
+  frame.data[4] = 0x02;
+  frame.data[5] = 0x20;
+  frame.data[6] = 0x02;
+  frame.data[7] = 0x02;
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = SYSTEMINFO_01;
+  frame.data_length_code = 8;
+  frame.data[0] = 0x84;
+  frame.data[1] = 0x3C;
+  frame.data[3] = 0x7F;
+  frame.data[4] = 0x14;
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = MOTOR_CODE_01;
+  frame.data_length_code = 8;
+  frame.data[1] = MOTOR_CODE_01_counter;
+  frame.data[2] = 0x2B;
+  frame.data[3] = 0x53;
+  frame.data[4] = 0x14;
+  frame.data[5] = 0x14;
+  frame.data[6] = 0xD7;
+  frame.data[7] = 0x24;
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_641);
+  MOTOR_CODE_01_counter++;
+  if (MOTOR_CODE_01_counter > 0x1F) {
+    MOTOR_CODE_01_counter = 0x10;
+  }
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = ESP_20;
+  frame.data_length_code = 8;
+  frame.data[1] = ESP_20_counter;
+  frame.data[2] = 0x2B;
+  frame.data[3] = 0x10;
+  frame.data[6] = 0xE2;
+  frame.data[7] = 0x79;
+  frame.data[0] = calcChecksum(frame.data, ID_SEQ_65D);
+  ESP_20_counter++;
+  if (ESP_20_counter > 0x3F) {
+    ESP_20_counter = 0x30;
+  }
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = DIAGNOSE_01;
+  frame.data_length_code = 8;
+  frame.data[0] = 0x30;
+  frame.data[1] = 0x4D;
+  frame.data[2] = 0x58;
+  frame.data[3] = 0xA2;
+  frame.data[4] = 0x89;
+  frame.data[5] = 0x85;
+  frame.data[6] = 0x3F;
+  frame.data[7] = 0x30;
+  haldex_can_send(frame, 0);
+
+  frame = {};
+  frame.identifier = KOMBI_02;
+  frame.data_length_code = 8;
+  frame.data[0] = 0x4D;
+  frame.data[1] = 0x58;
+  frame.data[2] = 0xF2;
+  frame.data[3] = 0xEE;
+  frame.data[4] = 0x04;
+  frame.data[5] = 0x2B;
+  frame.data[7] = 0x78;
+  haldex_can_send(frame, 0);
+}

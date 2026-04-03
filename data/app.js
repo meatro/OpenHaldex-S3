@@ -977,7 +977,7 @@ function initSetupPage() {
       dashMappings = { ...defaultDashMappings, ...profile.dashMappings };
     }
     const storedGen = String(profile?.haldexGeneration || "");
-    if (storedGen === "1" || storedGen === "2" || storedGen === "4") {
+    if (storedGen === "1" || storedGen === "2" || storedGen === "4" || storedGen === "5") {
       currentHaldexGen = storedGen;
     }
 
@@ -993,7 +993,7 @@ function initSetupPage() {
         };
       }
       const apiGen = String(status?.haldexGeneration || "");
-      if (apiGen === "1" || apiGen === "2" || apiGen === "4") {
+      if (apiGen === "1" || apiGen === "2" || apiGen === "4" || apiGen === "5") {
         currentHaldexGen = apiGen;
       }
     } catch {

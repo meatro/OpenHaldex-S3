@@ -211,6 +211,9 @@ void frames10(void* arg) {
       case 4:
         Gen4_frames10();
         break;
+      case 5:
+        Gen5_frames10();
+        break;
       }
     }
     vTaskDelay(10 / portTICK_PERIOD_MS);
@@ -230,6 +233,9 @@ void frames20(void* arg) {
       case 4:
         Gen4_frames20();
         break;
+      case 5:
+        Gen5_frames20();
+        break;
       }
     }
     vTaskDelay(20 / portTICK_PERIOD_MS);
@@ -248,6 +254,9 @@ void frames25(void* arg) {
         break;
       case 4:
         Gen4_frames25();
+        break;
+      case 5:
+        Gen5_frames25();
         break;
       }
     }
@@ -269,6 +278,9 @@ void frames100(void* arg) {
       case 4:
         Gen4_frames100();
         break;
+      case 5:
+        Gen5_frames100();
+        break;
       }
     }
     vTaskDelay(100 / portTICK_PERIOD_MS);
@@ -288,6 +300,9 @@ void frames200(void* arg) {
       case 4:
         Gen4_frames200();
         break;
+      case 5:
+        Gen5_frames200();
+        break;
       }
     }
     vTaskDelay(200 / portTICK_PERIOD_MS);
@@ -306,6 +321,9 @@ void frames1000(void* arg) {
         break;
       case 4:
         Gen4_frames1000();
+        break;
+      case 5:
+        Gen5_frames1000();
         break;
       }
     }

@@ -20,7 +20,7 @@ void broadcastOpenHaldex(void* arg) {
     broadcast_frame.rtr = 0;
     broadcast_frame.data_length_code = 8;
     broadcast_frame.data[0] = 0;
-    broadcast_frame.data[1] = isGen1Standalone + isGen2Standalone + isGen4Standalone;
+    broadcast_frame.data[1] = isStandalone ? 1 : 0;
     broadcast_frame.data[2] = (uint8_t)received_haldex_engagement_raw;
     broadcast_frame.data[3] = (uint8_t)lock_target;
     broadcast_frame.data[4] = received_vehicle_speed;
