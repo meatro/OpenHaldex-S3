@@ -1,6 +1,6 @@
 # OpenHaldex-S3
 
-![OpenHaldex-S3 screenshot](https://openhaldex.dev/images/Screenshot_20260212-210513.jpg)
+![OpenHaldex-S3 screenshot](https://openhaldex.dev/wp-content/uploads/2026/04/New-Project-2.webp)
 
 OpenHaldex-S3 is an ESP32-S3 based AWD controller for Haldex-equipped Volkswagen and transverse Audi vehicles.
 
