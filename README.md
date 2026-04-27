@@ -1,6 +1,6 @@
-# OpenHaldex-S3
+# OpenHaldex-S3: DIY AWD Controller for VAG Vehicles
 
-**QUICK ONE-CLICK WEB INSTALLER AT `<www.openhaldex.dev>`**
+**QUICK ONE-CLICK WEB INSTALLER AT WWW.OPENHALDEX.DEV**
 
 ![OpenHaldex-S3 screenshot](https://openhaldex.dev/wp-content/uploads/2026/04/New-Project-2.webp)
 
