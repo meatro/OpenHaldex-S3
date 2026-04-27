@@ -1,5 +1,7 @@
 # OpenHaldex-S3
 
+**QUICK ONE-CLICK WEB INSTALLER AT `<www.openhaldex.dev>`**
+
 ![OpenHaldex-S3 screenshot](https://openhaldex.dev/wp-content/uploads/2026/04/New-Project-2.webp)
 
 OpenHaldex-S3 is an ESP32-S3 based AWD controller for Haldex-equipped Volkswagen and transverse Audi vehicles.
@@ -227,6 +229,8 @@ Map storage lives in LittleFS.
 Loading a TXT map imports it into runtime and persists it through the current map path.
 
 ## Firmware Installation
+
+For the simplest install, use the quick web installer at <https://openhaldex.dev>. The details below are for manual builds, release assets, and OTA behavior.
 
 Firmware installation is required once. After that, updates can be performed through the OTA page.
 
