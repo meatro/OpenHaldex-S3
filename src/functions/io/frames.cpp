@@ -24,7 +24,7 @@ void Gen1_frames20() {
   frame.data[4] = get_lock_target_adjusted_value(0xFE, false);
   frame.data[5] = get_lock_target_adjusted_value(0xFE, false);
 
-  switch (state.mode) {
+  switch (openhaldexEffectiveMode()) {
   case MODE_FWD:
     appliedTorque = get_lock_target_adjusted_value(0xFE, true);
     break;

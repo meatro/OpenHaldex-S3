@@ -1,203 +1,308 @@
 # OpenHaldex-S3
 
-![OpenHaldex Screenshot](https://openhaldex.dev/images/Screenshot_20260212-210513.jpg)
+![OpenHaldex-S3 screenshot](https://openhaldex.dev/images/Screenshot_20260212-210513.jpg)
 
-### A free, open-source Haldex controller built on ~$50 of off-the-shelf hardware
+OpenHaldex-S3 is an ESP32-S3 based AWD controller for Haldex-equipped Volkswagen and transverse Audi vehicles.
 
-**Lift seat -> plug in -> done.**  
-No jacks. No harness. No permanent changes.
+It is designed around inexpensive off-the-shelf hardware, inline installation at the factory Haldex connector, and a built-in web UI for setup, tuning, diagnostics, logging, and OTA updates.
 
-OpenHaldex-S3 is a **map-driven AWD controller** for Gen 1, 2, 4, and now **Gen 5** Haldex-equipped VW and transverse Audi vehicles.
+The project supports Haldex generations **1, 2, 4, and 5**. VAG did not use Gen 3 Haldex in this application.
 
-Gen 5 support is a major milestone for this project because it opens the door to a much larger MQB-based vehicle market than the older PQ-only generations.
+## Status
 
-It is intentionally inexpensive, fast to install, and brutally simple.
+This repository is prepared for the v1.0 release. The current release metadata is kept in `version.json` and injected into the firmware build by `scripts/version.py`.
 
-All that is required is a LilyGo T-2CAN development board, two connectors, and the free software in this repository.
+The controller logic has been road-tested heavily on Gen 2 and now includes Gen 5 / MQB support. As with any drivetrain controller, verify all settings on your own vehicle before aggressive driving.
 
----
+## What It Does
 
-## Why this exists
+OpenHaldex-S3 sits inline between the vehicle chassis CAN bus and the Haldex control module. It can bridge stock traffic unchanged or modify selected CAN signals to request a different Haldex lock behavior.
 
-I've owned a Mk5 VW R32 since 2021 and have spent years poking the Haldex system with sticks trying to make it behave differently.
+Main features:
 
-In late 2025 I found **OpenHaldex-C6** by Forbes Automotive. The software was a good starting point, but I found the engagement too harsh for my liking, as their controller is effectively on/off and customization was very basic. In addition, their controller hardware presented some hurdles:
+- Haldex Gen 1, 2, 4, and 5 support
+- PQ chassis DBC support for Gen 1/2/4
+- MQB chassis DBC support for Gen 5
+- Home dashboard with live mode, ratio, telemetry, and 8 user-selectable signal tiles
+- Setup page for generation selection, input mapping, dashboard signals, learned calibration, and CAN mode trigger
+- Map mode with editable 2D lock table, custom bins, map import/export, and saved map selection
+- Speed, Throttle, and RPM curve modes
+- Fixed lock presets and stock/off pass-through behavior
+- Shared mode behavior gates:
+  - disengage under speed
+  - minimum throttle before lock request
+  - disable lock above speed
+  - lock release ramp
+  - controller output enable
+  - Haldex status broadcast
+- Learned Haldex output calibration table
+- Configurable CAN mode trigger, defaulting to the factory ESP/traction button signal after generation selection
+- CAN View with decoded/raw frames, filtering, bus selection, row origin markers, 30 second dump, and diagnostic capture mode
+- Diagnostics, logs, Wi-Fi settings, and OTA updates from the built-in web UI
 
-- The controller was frequently sold out
-- Every part of the hardware was custom made
-- Including the required custom wiring harness
+## Safety
 
-As a factory technician, replacing OEM wiring without a clear benefit doesn't excite me. Extending CAN several feet just to add a button didn't make sense.
+This project changes drivetrain behavior. Use it accordingly.
 
-So I built the same controller logic on inexpensive, readily available hardware, kept the factory wiring intact, and made the install trivial.
+- Select the correct Haldex generation before saving setup.
+- Calibrate the learned Haldex output table before relying on requested lock values.
+- Verify mapped speed, throttle, and RPM inputs at idle and low speed.
+- Do not tune while driving unless another person is operating the UI.
+- Keep a known conservative map available.
+- CAN View is for inspection and troubleshooting. It is not intended to replace a dedicated high-rate USB CAN interface.
 
----
+## Hardware
 
-## The install
+Required:
 
-1. Lift the rear seat
-2. Unplug the factory 6-pin Haldex connector
-3. Plug OpenHaldex-S3 inline
-4. Put the seat back down
+1. LilyGo T-2CAN ESP32-S3
+   <https://lilygo.cc/en-us/products/t-2can>
+2. VW 6-pin Haldex connectors:
+   - `1J0-973-713` to Haldex
+   - `1J0-973-813` from vehicle
 
-That's the entire install.
+Typical hardware cost is under $50 if using the LilyGo board and used OEM connectors.
 
-I installed mine in about five minutes, in the snow, with no lift. Uninstalling is the same process in reverse.
+The intended installation does not require soldering, splicing factory vehicle wiring, or a proprietary controller harness.
 
-One connector. Stock wiring immediately restored.  
-You can move the same unit between cars in minutes and leave **zero trace**.
+## Installation
 
----
+Basic install:
 
-## Hardware required
+1. Lift the rear seat.
+2. Unplug the factory 6-pin Haldex connector.
+3. Plug OpenHaldex-S3 inline.
+4. Put the seat back down.
 
-1. **LilyGo T-2CAN ESP32-S3**  
-   https://lilygo.cc/en-us/products/t-2can
-2. **VW connectors**
-   - 1J0-973-713 (to Haldex)
-   - 1J0-973-813 (from vehicle)
+Removing the controller restores the factory connection path.
 
-I used junkyard Tiguan 4Motion connectors. Re-pinning instructions are on Google or YouTube, if needed. (If you are not familiar with VAG connectors, learn before disassembling them!)
+## Mk5 VW R32 Wiring Example
 
-Total cost is under **$50**.
+This example uses the common Mk5 R32 / PQ style Haldex connector wiring. Confirm wiring for your own vehicle before building a harness.
 
-- No soldering
-- No proprietary PCB
-- No splicing
-- No custom harness
-- No locked ecosystem
+### Haldex Connector (`1J0-973-713`)
 
----
-
-## Firmware installation
-
-Firmware installation is only required once. All updates after that are performed **over-the-air** through the control panel. OTA checks `https://www.springfieldvw.com/openhaldex-s3/version.json` and installs both firmware + LittleFS when available.
-
----
-
-## Gen 5 / MQB support
-
-OpenHaldex-S3 now includes **Gen 5 Haldex support**.
-
-That matters because Gen 5 cars do **not** use the older PQ chassis CAN layout. They use **MQB**, and the firmware now reflects that:
-
-- Gen 5 can be selected directly in Setup.
-- CAN View decodes **MQB** chassis traffic when Gen 5 is selected.
-- Mapped inputs for speed, throttle, and RPM resolve against the **MQB DBC**, not the PQ DBC.
-- Gen 5 Haldex status/engagement decoding is included.
-- Gen 5 standalone/bridge frame generation has been ported in with the required counters and checksums.
-
----
-
-## Web UI
-
-After flashing, the device hosts its own Wi-Fi access point **and/or** can connect to your phone hotspot (to retain internet access).
-
-- If hotspot credentials are saved, it tries **STA** for ~15s.
-  - On success, browse to **http://openhaldex.local**
-- If STA fails or no creds are set, it falls back to **AP**.
-  - Connect to the OpenHaldex-S3 AP
-  - Open **http://192.168.4.1/** or **http://openhaldex.local**
-
-Available pages:
-
-- Home dashboard (controller toggle, live gauges, engagement bar)
-- Live map editor (9x7 speed/throttle with active trace)
-- Speed settings (curve editor + mode behavior controls)
-- Throttle settings (curve editor + mode behavior controls)
-- RPM settings (curve editor + mode behavior controls)
-- CAN viewer (decoded + raw, bus filter, token filter, diagnostic presets)
-- Diagnostics (controller/CAN/frame/network status)
-- Logs (live log view + runtime logging profile controls)
-- Setup (signal mapping + controller setup controls)
-- OTA updater (check/install progress)
-- Help / About
-
-CAN viewer extras:
-
-- 30s downloadable text dump (`/api/canview/dump`)
-- Safe diagnostic capture mode (`/api/canview/capture`) that forces Controller OFF + Broadcast ON while active
-- Inline row-color legend for RX / TX / generated frames
-
-No apps, no serial adapters, no special tools.
-
----
-
-## Maps
-
-- Current map is saved at `/maps/current.json` in LittleFS.
-- Saved maps are `/maps/<name>.json`.
-- Bundled TXT maps (read-only) ship in /maps:
-  - `fwd.txt`
-  - `conservative.txt`
-  - `aggressive.txt`
-  - `danger.txt`
-
----
-
-## Mk5 VW R32 wiring
-
-Wiring takes about 5-10 minutes. The hardest part is finding a screwdriver.
-
-### Haldex Connector (VW 1J0-973-713)
-
-1. 12V Power -> LilyGo 12-24V (BK/VI)
+1. 12V power -> LilyGo 12-24V (BK/VI)
 2. Ground -> LilyGo GND (BR)
 3. Brake -> Vehicle pin 3 (BK/RD)
 4. CAN L -> LilyGo CANLB (OR/BR)
 5. CAN H -> LilyGo CANHB (OR/BK)
 
-### Vehicle Connector (VW 1J0-973-813)
+### Vehicle Connector (`1J0-973-813`)
 
-1. 12V Power -> LilyGo 12-24V (BK/VI)
+1. 12V power -> LilyGo 12-24V (BK/VI)
 2. Ground -> LilyGo GND (BR)
 3. Brake -> Haldex pin 3 (BK/RD)
 4. CAN L -> LilyGo CANLA (OR/BR)
 5. CAN H -> LilyGo CANHA (OR/BK)
 
-Summary: **Both** 12V+ wires from connectors go to LilyGo 12V+. **Both** 12V- wires from connectors go to LilyGo GND. Chassis connector CAN H/L goes to CANHA/CANLA. Haldex connector CAN H/L goes to CANHB/CANLB. Splice the brake wires from both connectors together. If you have handbrake, splice those together as well. (OpenHaldex-S3 does not interrupt the brake or handbrake wires.)
+Summary:
 
-Note: 12V power and ground wires are 0.5MM to carry the required power to the differential. Do not use smaller wires. CAN wires should remain twisted pairs as long as possible.
+- Both 12V+ wires go to LilyGo 12-24V.
+- Both ground wires go to LilyGo GND.
+- Chassis CAN goes to CANHA/CANLA.
+- Haldex CAN goes to CANHB/CANLB.
+- Brake and handbrake wires pass through. OpenHaldex-S3 does not interrupt them.
+- Keep CAN pairs twisted as long as practical.
+- Do not undersize 12V power or ground wiring.
 
----
+## First Setup
 
-## Build (PlatformIO)
+After flashing and connecting to the web UI:
 
-This project is pinned to known-good PlatformIO + ESP32 Arduino versions.
+1. Open **Setup**.
+2. Select the correct Haldex generation: Gen 1, Gen 2, Gen 4, or Gen 5.
+3. Save settings. This applies recommended default CAN inputs and mode trigger for that generation.
+4. Calibrate the learned Haldex output table while Haldex CAN data is live.
+5. Return to **Home** and select a mode.
 
-1. Install VS Code + PlatformIO IDE.
-2. Open this folder (`openhaldex-s3-pio`) as a PlatformIO project.
-3. Build (replace COM# with the LilyGo's COM port. Example, COM13):
-   - `platformio run -e lilygo-t2can-s3`
-4. Upload firmware:
-   - `platformio run -e lilygo-t2can-s3 -t upload --upload-port COM#`
+The generation selector intentionally starts blank on first setup. Saved local/device settings take priority after a generation has been selected.
+
+## Web UI Access
+
+The controller can run as its own access point and can also connect to a saved phone hotspot or local Wi-Fi network.
+
+- If STA credentials are saved and enabled, it attempts STA for about 15 seconds.
+  - On success, browse to `http://openhaldex.local`.
+- If STA fails or is not configured, it falls back to AP mode.
+  - Connect to the OpenHaldex-S3 access point.
+  - Browse to `http://192.168.4.1/` or `http://openhaldex.local`.
+
+Pages:
+
+- **Home**: mode selection, live ratio, status badges, and dashboard signal tiles
+- **Map**: 2D requested-lock table, bins, shaping, saved maps, TXT import/export, mode behavior
+- **Speed Settings**: requested lock by vehicle speed
+- **Throttle Settings**: requested lock by throttle/pedal value
+- **RPM Settings**: requested lock by engine speed
+- **CAN View**: decoded/raw CAN inspection and short captures
+- **Diagnostics**: controller, CAN, Haldex, frame, and network status
+- **Logs**: runtime logs and logging controls
+- **Setup**: generation, input mapping, dashboard mapping, CAN mode trigger, calibration
+- **OTA**: firmware/filesystem updates and Wi-Fi settings
+- **Help / About**: onboard documentation and project information
+
+## Control Modes
+
+### Lock
+
+Applies a fixed requested lock level from the Home ratio control.
+
+### Speed
+
+Applies requested lock based on vehicle speed alone. Curve points are interpolated between saved speed bins.
+
+### Throttle
+
+Applies requested lock based on throttle or pedal input. This mode ties AWD response directly to driver demand.
+
+### RPM
+
+Applies requested lock based on engine speed.
+
+### Map
+
+Applies requested lock from a two-axis table. By default the axes use the mapped Speed and Throttle input slots.
+
+Advanced users can assign those input slots to any decoded CAN signal in Setup, then edit map bins and table values around those signals.
+
+Map tools include:
+
+- saved map dropdown
+- load/save/save-as/delete
+- TXT download and upload for sharing maps
+- table cell editing
+- custom speed/throttle bins
+- column shaping for quick map drafts
+- shared mode behavior controls
+
+### Off / Stock
+
+Returns to stock/pass-through behavior.
+
+## Setup Details
+
+Setup has four main jobs:
+
+- Select and save Haldex generation.
+- Map decoded CAN signals to required control inputs.
+- Assign decoded CAN signals to the 8 Home dashboard tiles.
+- Configure the optional CAN mode trigger.
+
+Recommended defaults are generation-specific:
+
+- Gen 1/2/4 use PQ chassis signals.
+- Gen 5 uses MQB chassis signals.
+
+The CAN mode trigger can enable one selected mode when one decoded signal meets a condition. The default trigger is the ESP/traction button signal for the selected generation, but the user can replace it with another decoded CAN signal.
+
+## CAN View
+
+CAN View is useful for validating signals and short troubleshooting captures.
+
+It includes:
+
+- decoded signal table
+- raw frame table
+- chassis / Haldex / all bus filter
+- token filtering by ID or signal name
+- generated-frame row marking
+- 30 second text dump
+- diagnostic capture mode
+
+It is not intended to be a full SavvyCAN replacement or a high-rate real-time Wi-Fi CAN interface. For that use case, use a dedicated USB CAN interface.
+
+## Maps and Filesystem
+
+Map storage lives in LittleFS.
+
+- Active runtime map: `/maps/current.json`
+- Saved custom maps: `/maps/<name>.json`
+- Bundled TXT presets:
+  - `fwd.txt`
+  - `conservative.txt`
+  - `aggressive.txt`
+  - `danger.txt`
+
+Loading a TXT map imports it into runtime and persists it through the current map path.
+
+## Firmware Installation
+
+Firmware installation is required once. After that, updates can be performed through the OTA page.
+
+The OTA updater checks:
+
+`https://openhaldex.dev/release/s3/version.json`
+
+The latest metadata points to versioned release assets such as:
+
+- `https://openhaldex.dev/release/s3/v1.0/firmware.bin`
+- `https://openhaldex.dev/release/s3/v1.0/littlefs.bin`
+
+OTA can update both firmware and LittleFS when release assets are available.
+
+## Build With PlatformIO
+
+This project is pinned to known-good PlatformIO and ESP32 Arduino package versions.
+
+1. Install VS Code and PlatformIO IDE.
+2. Open this folder as a PlatformIO project.
+3. Build:
+
+   ```powershell
+   platformio run -e lilygo-t2can-s3
+   ```
+
+4. Upload firmware, replacing `COM#` with the LilyGo serial port:
+
+   ```powershell
+   platformio run -e lilygo-t2can-s3 -t upload --upload-port COM#
+   ```
+
 5. Upload LittleFS:
-   - `platformio run -e lilygo-t2can-s3 -t uploadfs --upload-port COM#`
 
----
+   ```powershell
+   platformio run -e lilygo-t2can-s3 -t uploadfs --upload-port COM#
+   ```
+
+Build configuration:
+
+- Platform: `pioarduino/platform-espressif32`
+- Board: `esp32-s3-devkitc1-n16r8`
+- Flash: 16 MB
+- Filesystem: LittleFS
+- Main environment: `lilygo-t2can-s3`
+
+## Project Layout
+
+- `src/functions/api`: HTTP API handlers
+- `src/functions/can`: CAN receive/transmit and frame mutation paths
+- `src/functions/canview`: DBC decode tables and CAN View cache
+- `src/functions/core`: runtime state, modes, maps, curves, and calculations
+- `src/functions/net`: Wi-Fi and OTA update logic
+- `src/functions/storage`: Preferences, LittleFS maps, logs, and calibration persistence
+- `src/functions/tasks`: firmware tasks
+- `src/functions/web`: web server and static file serving
+- `include/functions`: public headers for the firmware modules
+- `data`: LittleFS web UI and bundled maps
+- `scripts`: PlatformIO helper scripts
+- `.github/workflows`: release deployment automation
 
 ## Attribution
 
-OpenHaldex-S3 builds upon the original OpenHaldex project by BangingDonk
-(MIT License) and subsequent OpenHaldex-C6 work by Forbes Automotive.
+OpenHaldex-S3 builds on the original OpenHaldex project by BangingDonk and subsequent OpenHaldex-C6 work by Forbes Automotive.
 
-This project adapts and extends that work for ESP32-S3 hardware, inline
-installation, live tuning, and additional telemetry.
-
----
+This project adapts and extends that work for ESP32-S3 hardware, inline installation, live tuning, Gen 5 support, and additional telemetry.
 
 ## Licensing
 
-OpenHaldex-S3 is now a split-license repository.
+OpenHaldex-S3 is a split-license repository.
 
 - Original OpenHaldex-S3 firmware code and MIT-upstream code remain under MIT.
-- The web UI in `data/` remains separately licensed under `data/LICENSE.md`.
-- Gen 5 support and identified OpenHaldex-C6-derived portions are distributed
-  under the Forbes Automotive Source-Available License (FASL) v1.0 and are
-  non-commercial only.
+- The web UI in `data/` is separately licensed under `data/LICENSE.md`.
+- Gen 5 support and identified OpenHaldex-C6-derived portions are distributed under the Forbes Automotive Source-Available License (FASL) v1.0 and are non-commercial only.
 
-If you redistribute source or binaries that include Gen 5 support, keep the
-third-party notices and the Forbes FASL text with the distribution.
+If you redistribute source or binaries that include Gen 5 support, keep the third-party notices and Forbes FASL text with the distribution.
 
 See:
 
@@ -205,219 +310,3 @@ See:
 - `THIRD_PARTY_NOTICES.md`
 - `THIRD_PARTY_LICENSES/Forbes-Automotive-FASL-v1.0.txt`
 - `data/LICENSE.md`
-
----
-
-## UI Licensing Notice
-
-The web-based user interface located in the `data/` directory is licensed
-separately from the rest of the OpenHaldex-S3 project.
-
-While parts of the firmware are MIT-licensed, Gen 5 / OpenHaldex-C6-derived
-portions are distributed under separate non-commercial terms, and the UI is
-subject to additional terms requiring visible attribution and restricting
-commercial redistribution.
-
-See `data/LICENSE.md` for details.
-
----
-
-## Technical Changelog (Rolling)
-
-This section tracks engineering-level changes made during the S3 port and stabilization work.
-
-### Latest Rolling Updates (Current Working Tree)
-
-- Added **Gen 5 Haldex support** across controller logic, API, setup UI, frame generation, and chassis/Haldex receive paths.
-- Added **MQB DBC support** alongside the existing PQ decoder.
-- Switched CAN View and mapped-input decoding to use **MQB** automatically when Gen 5 is selected.
-- Added shared DBC decode helpers so PQ and MQB signal tables use the same extraction/decode path.
-- Unified runtime UI script surface on `data/app.js` (all firmware UI pages now load one shared controller file).
-- Retired legacy `data/scripts.js` page dependency and folded route-specific UI controllers into the shared app runtime.
-- Extended mode-behavior controls on `map/speed/throttle/rpm` pages with explicit per-setting enable toggles:
-  - disengage-under-speed
-  - minimum-throttle gate
-  - high-speed disable gate
-  - release-ramp gate
-- Added value-retention behavior for disabled gates:
-  - users can disable a gate without losing the entered threshold value
-  - re-enable restores the saved value and applies it through `/api/settings`
-- Added dedicated UI pages and nav coverage for `speed`, `throttle`, `rpm`, `logs`, `setup`, `help`, and `about`.
-- Added CAN viewer row-color legend (RX/TX/GEN) to clarify frame origin/state while inspecting traffic.
-
-### Platform + Build System
-
-- Migrated and pinned the project to PlatformIO with explicit ESP32 package versions for reproducible builds.
-- Note: validated with VS Code 1.109 and PlatformIO 3.3.4
-- Targeted board profile moved to `esp32-s3-devkitc1-n16r8` with explicit 16 MB flash configuration.
-- Locked custom partitions + LittleFS in `platformio.ini`:
-  - `board_build.flash_size = 16MB`
-  - `board_build.partitions = partitions.csv`
-  - `board_build.filesystem = littlefs`
-- Added `scripts/version.py` pre-build hook to inject firmware version metadata from `version.json` into firmware APIs/UI.
-
-### Project Architecture Refactor
-
-- Refactored from monolithic Arduino-style layout to modular C++ structure under `src/functions/*` and `include/functions/*`.
-- Major subsystem split:
-  - `can`, `canview`, `core`, `api`, `net`, `storage`, `tasks`, `web`, `io`.
-- Centralized runtime state and telemetry in `core/state` to reduce duplicated globals and simplify API/status output.
-
-### CAN Stack + Bus Roles
-
-- Implemented dual-bus handling for LilyGo T-2CAN-ESP32-S3:
-  - Chassis bus via ESP32-S3 internal TWAI
-  - Haldex bus via MCP2515 (SPI)
-- Added compile-time bus role flag in pin config (`OH_CAN_HALDEX_MCP2515`) and mapped send/receive paths to keep logical `chassis_*` and `haldex_*` interfaces stable.
-- Added explicit bridge TX path tagging for generated vs bridged frames.
-- Added frame-level diagnostics for last sent key frames (motor/brake IDs) including:
-  - payload bytes
-  - generated/bridged classification
-  - frame age
-- Added Gen 5/MQB chassis receive handling for:
-  - boost
-  - throttle
-  - wheel-speed derived vehicle speed
-  - Gen 5 Haldex engagement/state decode on the Haldex bus
-
-### Controller/Map Logic
-
-- Integrated 2D map-driven lock control path with bilinear interpolation:
-  - speed bins x throttle bins
-  - editable lock table
-- Added per-mode low-speed disengage controls (`map/speed/throttle/rpm`) with full-throttle launch override (allows lock request below cutoff at ~99% pedal).
-- Added global runtime gates/toggles surfaced in settings APIs and UI:
-  - minimum throttle gate (`disableThrottle`)
-  - disable-above-speed gate (`disableSpeed`)
-  - broadcast bridge enable (`broadcastOpenHaldexOverCAN`)
-  - controller enable/disable (`disableController`)
-- Implemented mode behavior simplification around controller enabled/disabled workflow:
-  - Controller disabled -> stock/bridge behavior
-  - Controller enabled -> map-driven behavior
-- Preserved lock transformation helpers and frame mutation model from known working OpenHaldex lineages while adapting for S3 bus architecture.
-
-### Map Storage + Filesystem
-
-- LittleFS mount and map persistence hardened.
-- Active runtime map stored as `current.json` and persisted under `/maps`.
-- Added map CRUD APIs and UI controls:
-  - list, load, save, delete
-- Bundled default maps delivered in FS image (`fwd/conservative/aggressive/danger`) for immediate first boot usability.
-
-### Web API Surface
-
-- Expanded HTTP API set for runtime control and tooling:
-  - `/api/status`
-  - `/api/settings`
-  - `/api/map`
-  - `/api/maps` + load/save/delete endpoints
-  - `/api/wifi`
-  - `/api/network`
-  - `/api/update`, `/api/update/check`, `/api/update/install`
-  - `/api/canview`
-  - `/api/canview/dump`
-  - `/api/canview/capture`
-  - `/api/logs`, `/api/logs/read`, `/api/logs/delete`, `/api/logs/clear`
-- Normalized status payloads for UI pages (home/map/diag/canview/ota) to consume one consistent telemetry contract.
-
-### Logging + Runtime Debug Controls
-
-- Added filesystem-backed structured logging (`/logs`) with scoped outputs:
-  - all events (`/logs/all.txt`)
-  - CAN-specific stream (`/logs/can/can.txt`)
-  - error stream (`/logs/error/error.txt`)
-- Added log rotation with bounded file sizes to prevent unbounded growth.
-- Routed INFO/WARN/ERROR/DEBUG and CAN frame events into file logging with runtime category gating.
-- Added runtime logging controls in `/api/settings` and status reflection in `/api/status`:
-  - master file logging
-  - CAN/error file streams
-  - serial emit toggle
-  - firmware/network/CAN debug categories
-- Added protection behavior for high-verbosity debug capture profiles:
-  - forces controller to STOCK/off while active (at boot and on settings updates)
-  - reports `debugCaptureActive` in API responses for UI visibility
-
-### CAN Viewer Overhaul
-
-- Rebuilt CAN viewer into decoded + raw tables with consistent polling and redraw model.
-- Added bus filtering (`all`, `chassis`, `haldex`) and search filtering.
-- Added TX/RX display separation in rows and generation tagging (`generated` flag).
-- Added row highlighting for generated frames to distinguish OpenHaldex-injected traffic from pass-through traffic.
-- Added 30-second downloadable capture workflow via `/api/canview/dump` with bus filter support.
-- Added diagnostic preset dropdown that appends known tokens into the same space-delimited filter input.
-- Added safe capture mode toggle that temporarily locks runtime behavior for repeatable diagnostics.
-- Added DBC-driven chassis decode selection by Haldex generation:
-  - PQ for legacy generations
-  - MQB for Gen 5
-
-### Diagnostics Improvements
-
-- Added structured diagnostics blocks for:
-  - controller state and lock request/actual values
-  - CAN health (ready/failure/last seen ages)
-  - frame-level generation/bridge verification
-  - network state
-- Added/updated state label translation path for more readable diagnostics output.
-
-### UI/Frontend Consolidation
-
-- Consolidated duplicated inline CSS/JS into shared `data/styles.css` and shared runtime controller `data/app.js`.
-- Added consistent top navigation across pages.
-- Added main page live telemetry visuals:
-  - speed/throttle gauges (responsive sizing)
-  - engagement bar
-- Added map live-trace improvements and active-cell visibility tuning.
-- Added column shaping controls in the map editor for gradient edits across a selected speed bin.
-- Added UX consistency updates for controller toggle semantics and diagnostics naming.
-- Added dedicated dynamic-mode behavior controls on curve pages (low-speed disengage + global gating toggles) and aligned mode activation workflow to the Home page controls.
-- Added explicit per-setting enable/disable toggles for dynamic mode behavior controls while preserving user-entered thresholds when disabled.
-
-### Networking (AP/STA + mDNS)
-
-- Implemented AP/STA fallback model:
-  - attempt STA (hotspot creds) with timeout window
-  - fall back to AP if STA unavailable
-- Added persistent Wi-Fi credentials + STA enable state via Preferences storage.
-- Added configurable AP password support (`8..63` chars) via `/api/wifi` for securing the device hotspot.
-- Added network status reporting endpoint and UI block for mode/IP/hostname/internet state.
-- Added mDNS support for `openhaldex.local` and AP IP fallback workflows.
-
-### OTA Update Pipeline
-
-- Implemented OTA check/install subsystem in `functions/net/update`:
-  - version check from hosted `version.json` (`springfieldvw.com/openhaldex-s3`)
-  - firmware + filesystem dual-update flow
-  - HTTP redirect handling
-  - timeout + stream/write error handling
-  - staged progress reporting (bytes done/total, speed, stage)
-- Added OTA UI integration with online/offline status and update state.
-
-### Web Installer + Distribution
-
-- Added ESP Web Tools manifest (`manifest.json`) for direct browser flashing with explicit offsets:
-  - bootloader
-  - partitions
-  - firmware
-  - littlefs
-- Stabilized installer paths to hosted website assets to avoid cross-origin redirect issues during binary fetch.
-
-### Release Automation
-
-- Added GitHub Actions workflow: `.github/workflows/release-sync-website.yml`
-- Workflow behavior:
-  - trigger on release events (`published/prereleased/released/edited`) or manual dispatch with tag
-  - download release assets
-  - copy manifest
-  - verify payload
-  - FTPS deploy to website target directory
-  - clean-slate upload option for deterministic website installer payloads
-
-### Licensing + Provenance
-
-- Added MIT license file with explicit project attribution and provenance notes.
-- Documented upstream lineage and retained attribution references in repository materials.
-
-### Known Validation Focus Areas
-
-- Gen2 interpretation of certain Haldex feedback signals remains under active validation against real-world vehicle behavior.
-- Generated-frame vs measured-response correlation tooling is now in place (CAN dump + generated frame markers) for iterative road-test debugging.

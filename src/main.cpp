@@ -21,7 +21,7 @@ static AsyncWebServer server(80);
 static const char* AP_SSID = "OpenHaldex-S3";
 static const char* MDNS_NAME = "openhaldex";
 static const uint32_t WIFI_STA_RETRY_MS = 10000;
-static const char* OTA_VERSION_URL = "https://www.springfieldvw.com/openhaldex-s3/version.json";
+static const char* OTA_VERSION_URL = "https://openhaldex.dev/release/s3/version.json";
 static volatile bool g_internet_ok = false;
 static DNSServer g_ap_dns;
 static bool g_ap_dns_running = false;
@@ -249,7 +249,7 @@ static void wifiApplyTask(void* arg) {
 }
 
 void wifiApplySettings() {
-  xTaskCreate(wifiApplyTask, "wifiApply", 4096, nullptr, 1, nullptr);
+  xTaskCreatePinnedToCore(wifiApplyTask, "wifiApply", 4096, nullptr, 1, nullptr, OH_APP_TASK_CORE);
 }
 
 void setup() {
@@ -264,6 +264,8 @@ void setup() {
   filelogInit();
   storageLoad();
   mappedInputSignalsInit();
+  modeTriggerInit();
+  dashboardSignalsInit();
   LOG_INFO("system", "Storage loaded and logger active");
 
   // Keep CAN init first, but bring up AP/control plane before high-rate CAN tasks.
@@ -272,8 +274,8 @@ void setup() {
   tasksInit();
 
   updateInit();
-  xTaskCreatePinnedToCore(wifiStaMaintainTask, "wifiStaMaintain", 4096, nullptr, 1, nullptr, 1);
-  xTaskCreatePinnedToCore(internetCheckTask, "internetCheck", 4096, nullptr, 1, nullptr, 1);
+  xTaskCreatePinnedToCore(wifiStaMaintainTask, "wifiStaMaintain", 4096, nullptr, 1, nullptr, OH_APP_TASK_CORE);
+  xTaskCreatePinnedToCore(internetCheckTask, "internetCheck", 4096, nullptr, 1, nullptr, OH_APP_TASK_CORE);
 
   webInit(server);
   setupApi(server);

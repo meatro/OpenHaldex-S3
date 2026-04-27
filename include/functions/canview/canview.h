@@ -18,3 +18,20 @@ struct canview_last_tx_t {
 };
 
 bool canviewGetLastTxFrame(uint8_t bus, uint32_t id, canview_last_tx_t& out);
+
+struct canview_resolved_signal_t {
+  bool found;
+  bool mapped;
+  bool numeric;
+  bool generated;
+  uint32_t id;
+  uint32_t ageMs;
+  String bus;
+  String dir;
+  String name;
+  String unit;
+  float numericValue;
+  String textValue;
+};
+
+bool canviewResolveMappedSignal(const String& key, canview_resolved_signal_t& out);

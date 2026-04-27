@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <Preferences.h>
+#include <string.h>
 
 #include "functions/config/config.h"
 #include "functions/core/state.h"
@@ -33,6 +34,17 @@ static const char* RPM_CURVE_COUNT_KEY = "rpmCurveCnt";
 static const char* INPUT_MAP_SPEED_KEY = "inMapSpeed";
 static const char* INPUT_MAP_THROTTLE_KEY = "inMapThr";
 static const char* INPUT_MAP_RPM_KEY = "inMapRpm";
+static const char* MODE_TRIGGER_ENABLED_KEY = "mtOn";
+static const char* MODE_TRIGGER_SIGNAL_KEY = "mtSig";
+static const char* MODE_TRIGGER_OPERATOR_KEY = "mtOp";
+static const char* MODE_TRIGGER_VALUE_KEY = "mtVal";
+static const char* MODE_TRIGGER_MODE_KEY = "mtMode";
+static const char* MODE_TRIGGER_BROADCAST_KEY = "mtBcast";
+static const char* DASHBOARD_SIGNAL_KEYS[DASHBOARD_SIGNAL_SLOT_COUNT] = {
+  "dashSig1", "dashSig2", "dashSig3", "dashSig4", "dashSig5", "dashSig6", "dashSig7", "dashSig8",
+};
+static const char* LEARN_TABLE_VALID_KEY = "learnOK";
+static const char* LEARN_TABLE_KEY = "learnTbl";
 static const char* DISENGAGE_MAP_SPEED_KEY = "disMapSpd";
 static const char* DISENGAGE_SPEED_MODE_SPEED_KEY = "disSpdSpd";
 static const char* DISENGAGE_THROTTLE_MODE_SPEED_KEY = "disThrSpd";
@@ -42,6 +54,19 @@ static const char* MODE_SCHEMA_KEY = "modeSchema";
 static const uint8_t MODE_SCHEMA_UNKNOWN = 0;
 static const uint8_t MODE_SCHEMA_LEGACY = 1;
 static const uint8_t MODE_SCHEMA_VERSION = 2;
+
+static bool learn_table_is_usable() {
+  bool any_response = false;
+  for (size_t i = 0; i < sizeof(haldexLearnTable); i++) {
+    if (haldexLearnTable[i] > 100) {
+      return false;
+    }
+    if (haldexLearnTable[i] > 0) {
+      any_response = true;
+    }
+  }
+  return any_response;
+}
 
 static uint8_t normalize_stored_mode(uint8_t stored_mode, uint8_t schema_version) {
   if (schema_version < MODE_SCHEMA_VERSION) {
@@ -360,7 +385,9 @@ void storageLoad() {
     String mapped_speed;
     String mapped_throttle;
     String mapped_rpm;
+    mode_trigger_config_t mode_trigger_config = {};
     (void)mappedInputSignalsGet(mapped_speed, mapped_throttle, mapped_rpm, 0);
+    (void)modeTriggerConfigGet(mode_trigger_config, 0);
 
     pref.putBool("broadcastOpen", broadcastOpenHaldexOverCAN);
     pref.putBool("isStandalone", isStandalone);
@@ -396,6 +423,19 @@ void storageLoad() {
     pref.putString(INPUT_MAP_SPEED_KEY, mapped_speed);
     pref.putString(INPUT_MAP_THROTTLE_KEY, mapped_throttle);
     pref.putString(INPUT_MAP_RPM_KEY, mapped_rpm);
+    pref.putBool(MODE_TRIGGER_ENABLED_KEY, mode_trigger_config.enabled);
+    pref.putString(MODE_TRIGGER_SIGNAL_KEY, mode_trigger_config.signal);
+    pref.putUChar(MODE_TRIGGER_OPERATOR_KEY, (uint8_t)mode_trigger_config.op);
+    pref.putFloat(MODE_TRIGGER_VALUE_KEY, mode_trigger_config.value);
+    pref.putUChar(MODE_TRIGGER_MODE_KEY, (uint8_t)mode_trigger_config.mode);
+    pref.putBool(MODE_TRIGGER_BROADCAST_KEY, mode_trigger_config.broadcastOpenHaldexOverCAN);
+    String dashboard_slots[DASHBOARD_SIGNAL_SLOT_COUNT];
+    if (dashboardSignalsGet(dashboard_slots, DASHBOARD_SIGNAL_SLOT_COUNT, 0)) {
+      for (size_t i = 0; i < DASHBOARD_SIGNAL_SLOT_COUNT; i++) {
+        pref.putString(DASHBOARD_SIGNAL_KEYS[i], dashboard_slots[i]);
+      }
+    }
+    pref.putBool(LEARN_TABLE_VALID_KEY, false);
 
     reset_map_defaults();
     save_map_to_fs();
@@ -484,6 +524,39 @@ void storageLoad() {
     String mapped_throttle = pref.getString(INPUT_MAP_THROTTLE_KEY, "");
     String mapped_rpm = pref.getString(INPUT_MAP_RPM_KEY, "");
     (void)mappedInputSignalsSet(mapped_speed, mapped_throttle, mapped_rpm, 0);
+    mode_trigger_config_t mode_trigger_config = {};
+    mode_trigger_config.enabled = pref.getBool(MODE_TRIGGER_ENABLED_KEY, false);
+    mode_trigger_config.signal = pref.getString(MODE_TRIGGER_SIGNAL_KEY, "");
+    mode_trigger_config.op = (mode_trigger_operator_t)pref.getUChar(MODE_TRIGGER_OPERATOR_KEY, MODE_TRIGGER_GTE);
+    mode_trigger_config.value = pref.getFloat(MODE_TRIGGER_VALUE_KEY, 1.0f);
+    mode_trigger_config.mode = (openhaldex_mode_t)pref.getUChar(MODE_TRIGGER_MODE_KEY, MODE_MAP);
+    mode_trigger_config.broadcastOpenHaldexOverCAN =
+      pref.getBool(MODE_TRIGGER_BROADCAST_KEY, broadcastOpenHaldexOverCAN);
+    (void)modeTriggerConfigSet(mode_trigger_config, 0);
+    modeTriggerRuntimeReset();
+    String dashboard_slots[DASHBOARD_SIGNAL_SLOT_COUNT];
+    for (size_t i = 0; i < DASHBOARD_SIGNAL_SLOT_COUNT; i++) {
+      dashboard_slots[i] = pref.getString(DASHBOARD_SIGNAL_KEYS[i], "");
+    }
+    (void)dashboardSignalsSet(dashboard_slots, DASHBOARD_SIGNAL_SLOT_COUNT, 0);
+    haldexLearnActive = false;
+    haldexLearnCancel = false;
+    haldexLearnStep = 0;
+    haldexLearnCF = 0;
+    haldexLearnTableValid = pref.getBool(LEARN_TABLE_VALID_KEY, false);
+    if (haldexLearnTableValid && pref.getBytesLength(LEARN_TABLE_KEY) == sizeof(haldexLearnTable)) {
+      pref.getBytes(LEARN_TABLE_KEY, haldexLearnTable, sizeof(haldexLearnTable));
+      if (!learn_table_is_usable()) {
+        haldexLearnTableValid = false;
+        memset(haldexLearnTable, 0, sizeof(haldexLearnTable));
+        pref.putBool(LEARN_TABLE_VALID_KEY, false);
+        pref.remove(LEARN_TABLE_KEY);
+        LOG_WARN("storage", "discarded invalid Haldex learn table");
+      }
+    } else {
+      haldexLearnTableValid = false;
+      memset(haldexLearnTable, 0, sizeof(haldexLearnTable));
+    }
 
     String currentPath = storageGetCurrentMapPath();
     if (!storageLoadMapPath(currentPath)) {
@@ -563,10 +636,30 @@ void storageSave() {
   String mapped_speed;
   String mapped_throttle;
   String mapped_rpm;
+  mode_trigger_config_t mode_trigger_config = {};
   (void)mappedInputSignalsGet(mapped_speed, mapped_throttle, mapped_rpm, 2);
+  (void)modeTriggerConfigGet(mode_trigger_config, 2);
   pref.putString(INPUT_MAP_SPEED_KEY, mapped_speed);
   pref.putString(INPUT_MAP_THROTTLE_KEY, mapped_throttle);
   pref.putString(INPUT_MAP_RPM_KEY, mapped_rpm);
+  pref.putBool(MODE_TRIGGER_ENABLED_KEY, mode_trigger_config.enabled);
+  pref.putString(MODE_TRIGGER_SIGNAL_KEY, mode_trigger_config.signal);
+  pref.putUChar(MODE_TRIGGER_OPERATOR_KEY, (uint8_t)mode_trigger_config.op);
+  pref.putFloat(MODE_TRIGGER_VALUE_KEY, mode_trigger_config.value);
+  pref.putUChar(MODE_TRIGGER_MODE_KEY, (uint8_t)mode_trigger_config.mode);
+  pref.putBool(MODE_TRIGGER_BROADCAST_KEY, mode_trigger_config.broadcastOpenHaldexOverCAN);
+  String dashboard_slots[DASHBOARD_SIGNAL_SLOT_COUNT];
+  if (dashboardSignalsGet(dashboard_slots, DASHBOARD_SIGNAL_SLOT_COUNT, 2)) {
+    for (size_t i = 0; i < DASHBOARD_SIGNAL_SLOT_COUNT; i++) {
+      pref.putString(DASHBOARD_SIGNAL_KEYS[i], dashboard_slots[i]);
+    }
+  }
+  pref.putBool(LEARN_TABLE_VALID_KEY, haldexLearnTableValid);
+  if (haldexLearnTableValid) {
+    pref.putBytes(LEARN_TABLE_KEY, haldexLearnTable, sizeof(haldexLearnTable));
+  } else {
+    pref.remove(LEARN_TABLE_KEY);
+  }
 
   save_map_to_fs();
 

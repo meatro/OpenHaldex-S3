@@ -21,6 +21,34 @@ enum openhaldex_mode_t {
   MODE_7525 = MODE_7030     // legacy alias
 };
 
+enum mode_trigger_operator_t {
+  MODE_TRIGGER_GT,
+  MODE_TRIGGER_GTE,
+  MODE_TRIGGER_LT,
+  MODE_TRIGGER_LTE,
+  MODE_TRIGGER_EQ,
+  MODE_TRIGGER_NEQ,
+  MODE_TRIGGER_CHANGE,
+  mode_trigger_operator_t_MAX
+};
+
+struct mode_trigger_config_t {
+  bool enabled;
+  String signal;
+  mode_trigger_operator_t op;
+  float value;
+  openhaldex_mode_t mode;
+  bool broadcastOpenHaldexOverCAN;
+};
+
+struct mode_trigger_runtime_t {
+  bool active;
+  bool seen;
+  float lastValue;
+  uint32_t lastSeenMs;
+  uint32_t ageMs;
+};
+
 struct lockpoint_t {
   uint8_t speed;
   uint8_t lock;
@@ -53,6 +81,17 @@ extern uint8_t received_haldex_state;
 extern uint8_t received_haldex_engagement_raw;
 extern uint8_t received_haldex_engagement;
 extern uint8_t appliedTorque;
+
+extern uint8_t haldexLearnTable[101];
+extern bool haldexLearnTableValid;
+extern volatile bool haldexLearnActive;
+extern volatile bool haldexLearnCancel;
+extern volatile uint8_t haldexLearnStep;
+extern volatile uint8_t haldexLearnCF;
+extern bool haldexLearnRestorePending;
+extern bool haldexLearnRestoreDisableController;
+extern openhaldex_mode_t haldexLearnRestoreMode;
+extern uint8_t haldexLearnRestoreLastMode;
 
 extern float received_pedal_value;
 extern uint16_t received_vehicle_speed;
@@ -89,6 +128,25 @@ void mappedInputSignalsInit();
 bool mappedInputSignalsGet(String& speed, String& throttle, String& rpm, uint32_t timeout_ms = 0);
 bool mappedInputSignalsSet(const String& speed, const String& throttle, const String& rpm, uint32_t timeout_ms = 50);
 bool mappedInputSignalsConfigured();
+
+void modeTriggerInit();
+bool modeTriggerConfigGet(mode_trigger_config_t& config, uint32_t timeout_ms = 0);
+bool modeTriggerConfigSet(const mode_trigger_config_t& config, uint32_t timeout_ms = 50);
+void modeTriggerRuntimeGet(mode_trigger_runtime_t& runtime);
+void modeTriggerRuntimeUpdate(bool active, float value, uint32_t seen_ms);
+void modeTriggerRuntimeReset();
+bool modeTriggerOverrideActive();
+openhaldex_mode_t openhaldexEffectiveMode();
+bool openhaldexEffectiveBroadcastOpenHaldexOverCAN();
+const char* modeTriggerOperatorName(mode_trigger_operator_t op);
+bool modeTriggerOperatorFromString(const String& raw, mode_trigger_operator_t& op);
+
+extern bool modeTriggerSuppressed;
+
+#define DASHBOARD_SIGNAL_SLOT_COUNT 8
+void dashboardSignalsInit();
+bool dashboardSignalsGet(String* slots, size_t count, uint32_t timeout_ms = 0);
+bool dashboardSignalsSet(const String* slots, size_t count, uint32_t timeout_ms = 50);
 
 extern long lastCANChassisTick;
 extern long lastCANHaldexTick;

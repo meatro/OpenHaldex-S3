@@ -48,6 +48,11 @@ static volatile uint32_t mapped_speed_tick_ms = 0;
 static volatile uint32_t mapped_throttle_tick_ms = 0;
 static volatile uint32_t mapped_rpm_tick_ms = 0;
 static const uint32_t k_mapped_input_timeout_ms = 1000;
+static mapped_signal_binding_t mode_trigger_binding = {};
+static mode_trigger_config_t mode_trigger_config = {};
+static bool mode_trigger_prev_seen = false;
+static float mode_trigger_prev_value = 0.0f;
+static bool mode_trigger_change_latched = false;
 
 static String normalize_mapping_token(const String& input) {
   String out = input;
@@ -242,6 +247,92 @@ static bool apply_binding_from_frame(const mapped_signal_binding_t& binding, con
   return true;
 }
 
+static uint8_t map_haldex_engagement_percent(uint16_t raw, uint16_t raw_min, uint16_t raw_max) {
+  if (raw_max <= raw_min) {
+    return 0;
+  }
+  const long mapped = map((long)raw, (long)raw_min, (long)raw_max, 0L, 100L);
+  return (uint8_t)constrain(mapped, 0L, 100L);
+}
+
+static bool trigger_values_equal(float left, float right) {
+  return std::fabs(left - right) <= 0.001f;
+}
+
+static bool mode_trigger_configs_equal(const mode_trigger_config_t& left, const mode_trigger_config_t& right) {
+  return left.enabled == right.enabled && left.signal == right.signal && left.op == right.op &&
+         trigger_values_equal(left.value, right.value) && left.mode == right.mode &&
+         left.broadcastOpenHaldexOverCAN == right.broadcastOpenHaldexOverCAN;
+}
+
+static bool evaluate_mode_trigger_condition(float value) {
+  switch (mode_trigger_config.op) {
+  case MODE_TRIGGER_GT:
+    return value > mode_trigger_config.value;
+  case MODE_TRIGGER_GTE:
+    return value >= mode_trigger_config.value;
+  case MODE_TRIGGER_LT:
+    return value < mode_trigger_config.value;
+  case MODE_TRIGGER_LTE:
+    return value <= mode_trigger_config.value;
+  case MODE_TRIGGER_EQ:
+    return trigger_values_equal(value, mode_trigger_config.value);
+  case MODE_TRIGGER_NEQ:
+    return !trigger_values_equal(value, mode_trigger_config.value);
+  case MODE_TRIGGER_CHANGE: {
+    const bool target_now = trigger_values_equal(value, mode_trigger_config.value);
+    const bool target_before =
+      mode_trigger_prev_seen && trigger_values_equal(mode_trigger_prev_value, mode_trigger_config.value);
+    if (target_now && !target_before) {
+      mode_trigger_change_latched = true;
+    } else if (!target_now) {
+      mode_trigger_change_latched = false;
+    }
+    return mode_trigger_change_latched;
+  }
+  default:
+    break;
+  }
+  return false;
+}
+
+static void refresh_mode_trigger_binding() {
+  mode_trigger_config_t next_config = {};
+  if (!modeTriggerConfigGet(next_config, 0)) {
+    return;
+  }
+
+  if (!mode_trigger_configs_equal(mode_trigger_config, next_config)) {
+    mode_trigger_prev_seen = false;
+    mode_trigger_prev_value = 0.0f;
+    mode_trigger_change_latched = false;
+    modeTriggerRuntimeReset();
+  }
+
+  mode_trigger_config = next_config;
+  refresh_binding(mode_trigger_binding, mode_trigger_config.signal);
+
+  if (!mode_trigger_config.enabled || mode_trigger_config.signal.length() == 0 || !mode_trigger_binding.ready) {
+    modeTriggerRuntimeReset();
+  }
+}
+
+static void apply_mode_trigger_from_frame(const twai_message_t& frame, uint8_t bus_index, uint32_t now_ms) {
+  if (!mode_trigger_config.enabled || !mode_trigger_binding.ready) {
+    return;
+  }
+
+  float trigger_value = 0.0f;
+  if (!apply_binding_from_frame(mode_trigger_binding, frame, bus_index, trigger_value)) {
+    return;
+  }
+
+  const bool trigger_active = evaluate_mode_trigger_condition(trigger_value);
+  modeTriggerRuntimeUpdate(trigger_active, trigger_value, now_ms);
+  mode_trigger_prev_value = trigger_value;
+  mode_trigger_prev_seen = true;
+}
+
 // Chassis-side receive loop:
 // - caches incoming chassis traffic for CAN View
 // - updates core telemetry (throttle/rpm/speed)
@@ -267,12 +358,14 @@ void parseCAN_chs(void* arg) {
     refresh_binding(mapped_speed_binding, mapped_speed_source);
     refresh_binding(mapped_throttle_binding, mapped_throttle_source);
     refresh_binding(mapped_rpm_binding, mapped_rpm_source);
+    refresh_mode_trigger_binding();
 
     uint16_t burst_frames = 0;
     while (chassis_can_receive(rx_msg_chs())) {
       lastCANChassisTick = millis();
       canviewCacheFrame(rx_msg_chs(), 0);
       const uint32_t now_ms = millis();
+      apply_mode_trigger_from_frame(rx_msg_chs(), 0, now_ms);
 
       float mapped_value = 0.0f;
       if (apply_binding_from_frame(mapped_throttle_binding, rx_msg_chs(), 0, mapped_value)) {
@@ -409,7 +502,7 @@ void parseCAN_chs(void* arg) {
         twai_message_t original = rx_msg_chs();
 
         // STOCK: bridge unchanged. MAP: mutate known control frames for selected generation.
-        if (state.mode != MODE_STOCK) {
+        if (openhaldexEffectiveMode() != MODE_STOCK) {
           if (haldexGeneration == 1 || haldexGeneration == 2 || haldexGeneration == 4 || haldexGeneration == 5) {
             getLockData(rx_msg_chs());
             generatedFrame = !can_messages_equal(original, rx_msg_chs());
@@ -456,12 +549,14 @@ void parseCAN_hdx(void* arg) {
     refresh_binding(mapped_speed_binding, mapped_speed_source);
     refresh_binding(mapped_throttle_binding, mapped_throttle_source);
     refresh_binding(mapped_rpm_binding, mapped_rpm_source);
+    refresh_mode_trigger_binding();
 
     uint16_t burst_frames = 0;
     while (haldex_can_receive(rx_msg_hdx())) {
       lastCANHaldexTick = millis();
       canviewCacheFrame(rx_msg_hdx(), 1);
       const uint32_t now_ms = millis();
+      apply_mode_trigger_from_frame(rx_msg_hdx(), 1, now_ms);
 
       float mapped_value = 0.0f;
       if (apply_binding_from_frame(mapped_throttle_binding, rx_msg_hdx(), 1, mapped_value)) {
@@ -492,23 +587,23 @@ void parseCAN_hdx(void* arg) {
       if (haldexGeneration == 5) {
         if (rx_msg_hdx().identifier == HALDEX_ID_GEN5) {
           received_haldex_engagement_raw = rx_msg_hdx().data[2];
-          received_haldex_engagement = map(received_haldex_engagement_raw, 0, 250, 0, 100);
+          received_haldex_engagement = map_haldex_engagement_percent(received_haldex_engagement_raw, 0, 250);
           received_haldex_state = rx_msg_hdx().data[3];
         }
       } else {
         if (haldexGeneration == 1) {
           received_haldex_engagement_raw = rx_msg_hdx().data[1];
-          received_haldex_engagement = map(received_haldex_engagement_raw, 128, 198, 0, 100);
+          received_haldex_engagement = map_haldex_engagement_percent(received_haldex_engagement_raw, 128, 198);
         }
 
         if (haldexGeneration == 2) {
           received_haldex_engagement_raw = rx_msg_hdx().data[1] + rx_msg_hdx().data[4];
-          received_haldex_engagement = map(received_haldex_engagement_raw, 128, 255, 0, 100);
+          received_haldex_engagement = map_haldex_engagement_percent(received_haldex_engagement_raw, 128, 255);
         }
 
         if (haldexGeneration == 4) {
           received_haldex_engagement_raw = rx_msg_hdx().data[1];
-          received_haldex_engagement = map(received_haldex_engagement_raw, 128, 255, 0, 100);
+          received_haldex_engagement = map_haldex_engagement_percent(received_haldex_engagement_raw, 128, 255);
         }
         received_haldex_state = rx_msg_hdx().data[0];
       }
@@ -521,7 +616,9 @@ void parseCAN_hdx(void* arg) {
       received_speed_limit = (received_haldex_state & (1 << 6));
 
       // Forward Haldex traffic onto chassis CAN (bridge behavior).
-      chassis_can_send(rx_msg_hdx(), (10 / portTICK_PERIOD_MS));
+      if (openhaldexEffectiveBroadcastOpenHaldexOverCAN()) {
+        chassis_can_send(rx_msg_hdx(), (10 / portTICK_PERIOD_MS));
+      }
 
       if (++burst_frames >= k_rx_burst_yield_frames) {
         burst_frames = 0;

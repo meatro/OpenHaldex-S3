@@ -13,7 +13,7 @@
 #endif
 
 #ifndef OH_UPDATE_URL
-#define OH_UPDATE_URL "https://www.springfieldvw.com/openhaldex-s3/version.json"
+#define OH_UPDATE_URL "https://openhaldex.dev/release/s3/version.json"
 #endif
 
 static portMUX_TYPE g_updateMux = portMUX_INITIALIZER_UNLOCKED;
@@ -135,6 +135,58 @@ static void progressUpdate(uint32_t done, float bps) {
   portEXIT_CRITICAL(&g_updateMux);
 }
 
+static bool isAbsoluteUrl(const String& value) {
+  return value.startsWith("http://") || value.startsWith("https://");
+}
+
+static String urlDirectory(const String& url) {
+  int slash = url.lastIndexOf("/");
+  if (slash <= 0) {
+    return url;
+  }
+  return url.substring(0, slash);
+}
+
+static String joinUrlPath(const String& left, const String& right) {
+  if (left.length() == 0) {
+    return right;
+  }
+  if (right.length() == 0) {
+    return left;
+  }
+
+  bool leftSlash = left.endsWith("/");
+  bool rightSlash = right.startsWith("/");
+  if (leftSlash && rightSlash) {
+    return left + right.substring(1);
+  }
+  if (!leftSlash && !rightSlash) {
+    return left + "/" + right;
+  }
+  return left + right;
+}
+
+static String buildArtifactUrl(const String& manifestUrl, const String& version, const String& releasePath,
+                               const String& filename) {
+  if (filename.length() == 0) {
+    return "";
+  }
+  if (isAbsoluteUrl(filename)) {
+    return filename;
+  }
+
+  const String manifestDir = urlDirectory(manifestUrl);
+  String artifactBase = manifestDir;
+
+  if (releasePath.length() > 0) {
+    artifactBase = joinUrlPath(manifestDir, releasePath);
+  } else if (version.length() > 0) {
+    artifactBase = joinUrlPath(manifestDir, version);
+  }
+
+  return joinUrlPath(artifactBase, filename);
+}
+
 static void performCheck() {
   if (WiFi.status() != WL_CONNECTED) {
     set_state("", false, "offline");
@@ -160,16 +212,12 @@ static void performCheck() {
     auto err = deserializeJson(doc, body);
     if (!err) {
       String latest = doc["version"] | "";
+      String releasePath = doc["releasePath"] | "";
       String fwName = doc["firmware"] | "";
       String fsName = doc["filesystem"] | "";
 
-      String base = String(OH_UPDATE_URL);
-      int slash = base.lastIndexOf("/");
-      if (slash > 0)
-        base = base.substring(0, slash);
-
-      String fwUrl = fwName.length() ? (base + "/" + fwName) : "";
-      String fsUrl = fsName.length() ? (base + "/" + fsName) : "";
+      String fwUrl = buildArtifactUrl(String(OH_UPDATE_URL), latest, releasePath, fwName);
+      String fsUrl = buildArtifactUrl(String(OH_UPDATE_URL), latest, releasePath, fsName);
       set_urls(fwUrl, fsUrl);
 
       bool available = latest.length() > 0 && latest != OPENHALDEX_VERSION;
@@ -368,6 +416,6 @@ bool updateInstallStart() {
   g_installError = "";
   portEXIT_CRITICAL(&g_updateMux);
 
-  xTaskCreate(updateInstallTask, "updateInstall", 8192, NULL, 1, NULL);
+  xTaskCreatePinnedToCore(updateInstallTask, "updateInstall", 8192, NULL, 1, NULL, OH_APP_TASK_CORE);
   return true;
 }

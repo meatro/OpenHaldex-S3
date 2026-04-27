@@ -25,10 +25,10 @@ void broadcastOpenHaldex(void* arg) {
     broadcast_frame.data[3] = (uint8_t)lock_target;
     broadcast_frame.data[4] = received_vehicle_speed;
     broadcast_frame.data[5] = state.mode_override;
-    broadcast_frame.data[6] = (uint8_t)state.mode;
+    broadcast_frame.data[6] = (uint8_t)openhaldexEffectiveMode();
     broadcast_frame.data[7] = (uint8_t)received_pedal_value;
 
-    if (broadcastOpenHaldexOverCAN) {
+    if (openhaldexEffectiveBroadcastOpenHaldexOverCAN()) {
       chassis_can_send(broadcast_frame, (10 / portTICK_PERIOD_MS));
     }
     vTaskDelay(OH_BROADCAST_REFRESH_MS / portTICK_PERIOD_MS);

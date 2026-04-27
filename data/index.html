@@ -1,6 +1,6 @@
 ﻿<!--
 OpenHaldex-S3 UI
-ï¿½ 2026 SpringfieldVW.com
+&copy; 2026 SpringfieldVW.com
 Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 -->
 <!doctype html>
@@ -234,13 +234,30 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
             />
           </div>
           <div class="status-icons">
-            <div class="status-icon warning">
-              <svg viewBox="0 0 24 24">
-                <path d="M12 4l8 14H4L12 4z" fill="none" stroke="currentColor" stroke-width="2" />
-              </svg>
+            <div
+              class="status-icon warning"
+              data-status-icon="temp"
+              title="Temp protection"
+              aria-label="Temp protection"
+            >
+              TMP
             </div>
-            <div class="status-icon brake">B</div>
-            <div class="status-icon park">P</div>
+            <div
+              class="status-icon can"
+              data-status-icon="can"
+              title="CAN health"
+              aria-label="CAN health"
+            >
+              CAN
+            </div>
+            <div
+              class="status-icon awd"
+              data-status-icon="awd"
+              title="AWD state"
+              aria-label="AWD state"
+            >
+              AWD
+            </div>
           </div>
         </div>
       </div>
@@ -291,17 +308,7 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 
       <!-- Footer -->
       <footer class="footer">
-        <div>OpenHaldex-S3 ï¿½ SpringfieldVW.com</div>
-        <div class="version">
-          v0.6.0
-          <span class="update-available">
-            <svg viewBox="0 0 16 16">
-              <circle cx="8" cy="8" r="7" fill="currentColor" />
-              <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="white" stroke-width="1.5" />
-            </svg>
-            new version available
-          </span>
-        </div>
+        <div>OpenHaldex-S3 &copy; SpringfieldVW.com</div>
       </footer>
     </div>
     <script src="./app.js"></script>

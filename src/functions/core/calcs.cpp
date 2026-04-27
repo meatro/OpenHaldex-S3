@@ -9,8 +9,8 @@
 // Gate for any lock request generation.
 // - MODE_MAP / MODE_SPEED / MODE_THROTTLE / MODE_RPM always use their tables.
 // - Preset modes apply pedal/speed threshold rules.
-static inline bool lock_enabled() {
-  if (state.mode == MODE_MAP || state.mode == MODE_SPEED || state.mode == MODE_THROTTLE || state.mode == MODE_RPM) {
+static inline bool lock_enabled(openhaldex_mode_t mode) {
+  if (mode == MODE_MAP || mode == MODE_SPEED || mode == MODE_THROTTLE || mode == MODE_RPM) {
     return true;
   }
   bool throttle_ok = (state.pedal_threshold == 0) || (int(received_pedal_value) >= state.pedal_threshold);
@@ -18,8 +18,8 @@ static inline bool lock_enabled() {
   return throttle_ok && speed_ok;
 }
 
-static uint16_t current_dynamic_mode_disengage_speed() {
-  switch (state.mode) {
+static uint16_t current_dynamic_mode_disengage_speed(openhaldex_mode_t mode) {
+  switch (mode) {
   case MODE_MAP:
     return disengageUnderSpeedMap;
   case MODE_SPEED:
@@ -33,8 +33,8 @@ static uint16_t current_dynamic_mode_disengage_speed() {
   }
 }
 
-static bool dynamic_mode_speed_gate_allows_lock() {
-  const uint16_t disengage_under_speed = current_dynamic_mode_disengage_speed();
+static bool dynamic_mode_speed_gate_allows_lock(openhaldex_mode_t mode) {
+  const uint16_t disengage_under_speed = current_dynamic_mode_disengage_speed(mode);
   if (disengage_under_speed == 0) {
     return true;
   }
@@ -69,11 +69,11 @@ static float interpolate_curve_u16(uint16_t x, const uint16_t* bins, const uint8
   return (float)values[count - 1];
 }
 
-static float get_speed_lock_target() {
-  if (!lock_enabled()) {
+static float get_speed_lock_target(openhaldex_mode_t mode) {
+  if (!lock_enabled(mode)) {
     return 0.0f;
   }
-  if (!dynamic_mode_speed_gate_allows_lock()) {
+  if (!dynamic_mode_speed_gate_allows_lock(mode)) {
     return 0.0f;
   }
   float lock = interpolate_curve_u16(received_vehicle_speed, speed_curve_bins, speed_curve_lock, speed_curve_count);
@@ -84,11 +84,11 @@ static float get_speed_lock_target() {
   return lock;
 }
 
-static float get_throttle_lock_target() {
-  if (!lock_enabled()) {
+static float get_throttle_lock_target(openhaldex_mode_t mode) {
+  if (!lock_enabled(mode)) {
     return 0.0f;
   }
-  if (!dynamic_mode_speed_gate_allows_lock()) {
+  if (!dynamic_mode_speed_gate_allows_lock(mode)) {
     return 0.0f;
   }
   float throttle = received_pedal_value;
@@ -110,13 +110,13 @@ static float get_throttle_lock_target() {
   return lock;
 }
 
-static float get_map_lock_target() {
+static float get_map_lock_target(openhaldex_mode_t mode) {
   // 2D throttle/speed map with bilinear interpolation between bins.
   // Result is normalized to a lock percent in [0..100].
-  if (!lock_enabled()) {
+  if (!lock_enabled(mode)) {
     return 0;
   }
-  if (!dynamic_mode_speed_gate_allows_lock()) {
+  if (!dynamic_mode_speed_gate_allows_lock(mode)) {
     return 0.0f;
   }
 
@@ -189,11 +189,11 @@ static float get_map_lock_target() {
   return v;
 }
 
-static float get_rpm_lock_target() {
-  if (!lock_enabled()) {
+static float get_rpm_lock_target(openhaldex_mode_t mode) {
+  if (!lock_enabled(mode)) {
     return 0.0f;
   }
-  if (!dynamic_mode_speed_gate_allows_lock()) {
+  if (!dynamic_mode_speed_gate_allows_lock(mode)) {
     return 0.0f;
   }
   float lock = interpolate_curve_u16(received_vehicle_rpm, rpm_curve_bins, rpm_curve_lock, rpm_curve_count);
@@ -265,45 +265,46 @@ static float smooth_lock_release(float raw_target) {
 // This is the single source of "requested lock" used by CAN frame mutation.
 float get_lock_target_adjustment() {
   float raw_target = 0.0f;
-  switch (state.mode) {
+  const openhaldex_mode_t mode = openhaldexEffectiveMode();
+  switch (mode) {
   case MODE_FWD:
     raw_target = 0.0f;
     break;
 
   case MODE_5050:
-    raw_target = lock_enabled() ? 100.0f : 0.0f;
+    raw_target = lock_enabled(mode) ? 100.0f : 0.0f;
     break;
 
   case MODE_6040:
-    raw_target = lock_enabled() ? 40.0f : 0.0f;
+    raw_target = lock_enabled(mode) ? 40.0f : 0.0f;
     break;
 
   case MODE_7030:
-    raw_target = lock_enabled() ? 30.0f : 0.0f;
+    raw_target = lock_enabled(mode) ? 30.0f : 0.0f;
     break;
 
   case MODE_8020:
-    raw_target = lock_enabled() ? 20.0f : 0.0f;
+    raw_target = lock_enabled(mode) ? 20.0f : 0.0f;
     break;
 
   case MODE_9010:
-    raw_target = lock_enabled() ? 10.0f : 0.0f;
+    raw_target = lock_enabled(mode) ? 10.0f : 0.0f;
     break;
 
   case MODE_SPEED:
-    raw_target = get_speed_lock_target();
+    raw_target = get_speed_lock_target(mode);
     break;
 
   case MODE_THROTTLE:
-    raw_target = get_throttle_lock_target();
+    raw_target = get_throttle_lock_target(mode);
     break;
 
   case MODE_MAP:
-    raw_target = get_map_lock_target();
+    raw_target = get_map_lock_target(mode);
     break;
 
   case MODE_RPM:
-    raw_target = get_rpm_lock_target();
+    raw_target = get_rpm_lock_target(mode);
     break;
 
   default:
@@ -316,6 +317,11 @@ float get_lock_target_adjustment() {
 // Converts a generation-specific control byte into a mode-adjusted byte.
 // `invert=true` is used by frames where lower encoded values mean higher lock.
 uint8_t get_lock_target_adjusted_value(uint8_t value, bool invert) {
+  if (haldexLearnActive) {
+    uint8_t corrected_value = (uint16_t)value * (uint8_t)haldexLearnCF / 100;
+    return (invert ? (0xFE - corrected_value) : corrected_value);
+  }
+
   float requested_lock = lock_target;
   if (requested_lock < 0.0f) {
     requested_lock = 0.0f;
@@ -329,7 +335,7 @@ uint8_t get_lock_target_adjusted_value(uint8_t value, bool invert) {
   }
 
   if (requested_lock >= 100.0f) {
-    if (lock_enabled()) {
+    if (lock_enabled(openhaldexEffectiveMode())) {
       return (invert ? (0xFE - value) : value);
     }
     return (invert ? 0xFE : 0x00);
@@ -339,9 +345,21 @@ uint8_t get_lock_target_adjusted_value(uint8_t value, bool invert) {
     return (invert ? 0xFE : 0x00);
   }
 
-  float correction_factor = (requested_lock * 0.5f) + 20.0f;
-  uint8_t corrected_value = value * (correction_factor / 100);
-  if (lock_enabled()) {
+  uint8_t correction_factor = 0;
+  if (haldexLearnTableValid) {
+    correction_factor = 100;
+    for (uint8_t i = 0; i <= 100; i++) {
+      if (haldexLearnTable[i] >= (uint8_t)requested_lock) {
+        correction_factor = i;
+        break;
+      }
+    }
+  } else {
+    correction_factor = (uint8_t)constrain((requested_lock * 0.5f) + 20.0f, 0.0f, 100.0f);
+  }
+
+  uint8_t corrected_value = (uint16_t)value * correction_factor / 100;
+  if (lock_enabled(openhaldexEffectiveMode())) {
     return (invert ? (0xFE - corrected_value) : corrected_value);
   }
   return (invert ? 0xFE : 0x00);

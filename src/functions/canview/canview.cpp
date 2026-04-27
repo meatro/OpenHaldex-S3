@@ -5,6 +5,7 @@
 #include "functions/core/state.h"
 #include "functions/storage/filelog.h"
 #include <math.h>
+#include <stdlib.h>
 
 struct canview_frame_t {
   uint32_t key;
@@ -248,6 +249,240 @@ static int canview_get_mux_value(uint32_t id, const canview_frame_t& frame, bool
   uint64_t raw = dbc_extract_raw(frame.data, mux_sig->start_bit, mux_sig->length, mux_sig->is_little_endian);
   ok = true;
   return (int)raw;
+}
+
+static String canview_normalize_signal_token(const char* value) {
+  String token = String(value ? value : "");
+  token.replace("_", " ");
+  token.trim();
+  token.toLowerCase();
+  return token;
+}
+
+static String canview_normalize_unit_token(const char* value) {
+  String token = String(value ? value : "");
+  token.trim();
+  token.toLowerCase();
+  return token;
+}
+
+static bool canview_split_mapping_key(const String& raw, String& bus, String& frame, String& signal, String& unit) {
+  int first = raw.indexOf('|');
+  if (first < 0) {
+    return false;
+  }
+  int second = raw.indexOf('|', first + 1);
+  if (second < 0) {
+    return false;
+  }
+  int third = raw.indexOf('|', second + 1);
+  if (third < 0) {
+    return false;
+  }
+
+  bus = raw.substring(0, first);
+  frame = raw.substring(first + 1, second);
+  signal = raw.substring(second + 1, third);
+  unit = raw.substring(third + 1);
+  bus.trim();
+  bus.toLowerCase();
+  frame.trim();
+  frame.toLowerCase();
+  signal.trim();
+  signal.toLowerCase();
+  unit.trim();
+  unit.toLowerCase();
+  return bus.length() > 0 && frame.length() > 0 && signal.length() > 0;
+}
+
+static bool canview_parse_frame_id(const String& token, uint32_t& out_id) {
+  String value = token;
+  value.trim();
+  if (!value.length()) {
+    return false;
+  }
+
+  char* end = nullptr;
+  unsigned long parsed = strtoul(value.c_str(), &end, 0);
+  if (!end || *end != '\0') {
+    return false;
+  }
+  out_id = (uint32_t)parsed;
+  return true;
+}
+
+static const dbc_signal_t* canview_find_signal_definition(uint32_t id, const String& signal_name,
+                                                          const String& signal_unit) {
+  const dbc_signal_t* name_match = nullptr;
+  const dbc_signal_t* active_signals = canview_active_chassis_signals();
+  const uint16_t active_signal_count = canview_active_chassis_signal_count();
+  for (uint16_t i = 0; i < active_signal_count; i++) {
+    const dbc_signal_t* sig = &active_signals[i];
+    if (sig->id != id) {
+      continue;
+    }
+    if (canview_normalize_signal_token(sig->name) != signal_name) {
+      continue;
+    }
+    if (canview_normalize_unit_token(sig->unit) == signal_unit) {
+      return sig;
+    }
+    if (!name_match) {
+      name_match = sig;
+    }
+  }
+  return name_match;
+}
+
+static bool canview_frame_matches_signal(const dbc_signal_t* signal, const canview_frame_t& frame) {
+  if (!signal) {
+    return false;
+  }
+  if (signal->mux < 0) {
+    return true;
+  }
+
+  bool mux_ok = false;
+  const int mux_val = canview_get_mux_value(signal->id, frame, mux_ok);
+  return mux_ok && mux_val == signal->mux;
+}
+
+static bool canview_find_latest_frame_for_id(const canview_frame_t* cache, uint8_t cache_size, uint32_t id,
+                                             uint32_t now, canview_frame_t& out) {
+  bool found = false;
+  uint32_t newest_ts = 0;
+  const uint32_t key = id & 0x1FFFFFFF;
+  for (uint8_t i = 0; i < cache_size; i++) {
+    if ((cache[i].key & 0x1FFFFFFF) != key) {
+      continue;
+    }
+    if (!cache[i].ts || (now - cache[i].ts) > CANVIEW_STALE_MS) {
+      continue;
+    }
+    if (!found || cache[i].ts > newest_ts) {
+      out = cache[i];
+      newest_ts = cache[i].ts;
+      found = true;
+    }
+  }
+  return found;
+}
+
+static bool canview_select_latest_frame(const String& bus, uint32_t id, canview_frame_t& out, String& out_dir) {
+  const uint32_t now = millis();
+  canview_frame_t rx_frame = {};
+  canview_frame_t tx_frame = {};
+  bool has_rx = false;
+  bool has_tx = false;
+
+  if (bus == "chassis") {
+    has_rx = canview_find_latest_frame_for_id(canview_chassis_cache, CANVIEW_CHASSIS_CACHE_SIZE, id, now, rx_frame);
+    has_tx = canview_find_latest_frame_for_id(canview_chassis_cache_tx, CANVIEW_CHASSIS_CACHE_SIZE, id, now, tx_frame);
+  } else if (bus == "haldex") {
+    has_rx = canview_find_latest_frame_for_id(canview_haldex_cache, CANVIEW_HALDEX_CACHE_SIZE, id, now, rx_frame);
+    has_tx = canview_find_latest_frame_for_id(canview_haldex_cache_tx, CANVIEW_HALDEX_CACHE_SIZE, id, now, tx_frame);
+  } else {
+    return false;
+  }
+
+  if (!has_rx && !has_tx) {
+    return false;
+  }
+
+  if (has_tx && (!has_rx || tx_frame.ts >= rx_frame.ts)) {
+    out = tx_frame;
+    out_dir = "TX";
+    return true;
+  }
+
+  out = rx_frame;
+  out_dir = "RX";
+  return true;
+}
+
+bool canviewResolveMappedSignal(const String& key, canview_resolved_signal_t& out) {
+  out.found = false;
+  out.mapped = false;
+  out.numeric = false;
+  out.generated = false;
+  out.id = 0;
+  out.ageMs = 0;
+  out.bus = "";
+  out.dir = "";
+  out.name = "";
+  out.unit = "";
+  out.numericValue = 0.0f;
+  out.textValue = "";
+
+  String normalized = key;
+  normalized.trim();
+  normalized.toLowerCase();
+  out.mapped = normalized.length() > 0;
+  if (!out.mapped) {
+    return false;
+  }
+
+  String bus;
+  String frame_token;
+  String signal_name;
+  String signal_unit;
+  if (!canview_split_mapping_key(normalized, bus, frame_token, signal_name, signal_unit)) {
+    return false;
+  }
+
+  uint32_t frame_id = 0;
+  if (!canview_parse_frame_id(frame_token, frame_id)) {
+    return false;
+  }
+
+  canview_frame_t frame = {};
+  String dir;
+  if (!canview_select_latest_frame(bus, frame_id, frame, dir)) {
+    return false;
+  }
+
+  out.bus = bus;
+  out.dir = dir;
+  out.generated = frame.generated;
+  out.id = frame.id;
+  out.ageMs = millis() - frame.ts;
+
+  if (signal_name == "haldex state") {
+    uint8_t state = (haldexGeneration == 5) ? frame.data[3] : frame.data[0];
+    out.found = true;
+    out.name = "Haldex state";
+    out.textValue = canview_haldex_state_label(state);
+    return true;
+  }
+
+  if (signal_name == "engagement") {
+    uint16_t raw = (haldexGeneration == 5) ? frame.data[2] : frame.data[1];
+    if (haldexGeneration == 2) {
+      raw = (uint16_t)(frame.data[1] + frame.data[4]);
+    }
+    out.found = true;
+    out.numeric = true;
+    out.name = "Engagement";
+    out.numericValue = raw;
+    return true;
+  }
+
+  const dbc_signal_t* sig = canview_find_signal_definition(frame_id, signal_name, signal_unit);
+  if (!sig || !canview_frame_matches_signal(sig, frame)) {
+    return false;
+  }
+
+  float value = dbc_decode_signal(sig, frame.data);
+  if (!isfinite(value)) {
+    return false;
+  }
+
+  out.found = true;
+  out.numeric = true;
+  out.name = String(sig->name ? sig->name : "");
+  out.unit = String(sig->unit ? sig->unit : "");
+  out.numericValue = value;
+  return true;
 }
 
 String canviewBuildJson(uint16_t decoded_limit, uint8_t raw_limit, const String& bus_filter) {

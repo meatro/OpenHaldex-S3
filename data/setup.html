@@ -139,15 +139,89 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 
       <main class="setup-main" aria-label="Signal setup workflow">
         <div class="grid-container">
-          <div class="col-12">
-            <section class="setup-card setup-hero">
-              <p class="setup-kicker">Setup Wizard</p>
-              <div class="setup-pill-row">
-                <span class="setup-pill active">1. Scan</span>
-                <span class="setup-pill active">2. Map Inputs</span>
-                <span class="setup-pill active">3. Pick Dash Signals</span>
-                <span class="setup-pill">4. Save Profile</span>
+          <div class="col-12 setup-split-left">
+            <section class="setup-card setup-generation">
+              <div class="setup-section-head">
+                <h2>Select Generation</h2>
               </div>
+
+              <div class="setup-generation-row">
+                <div id="haldex-gen-picker" class="signal-picker haldex-gen-picker">
+                  <button
+                    type="button"
+                    id="haldex-gen-toggle"
+                    class="signal-picker-toggle"
+                    aria-haspopup="listbox"
+                    aria-expanded="false"
+                    aria-label="Haldex generation"
+                  >
+                    <span id="haldex-gen-value" class="signal-picker-value">Select generation</span>
+                    <svg
+                      class="signal-picker-caret"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="currentColor"
+                      stroke-width="2"
+                    >
+                      <polyline points="6 9 12 15 18 9" />
+                    </svg>
+                  </button>
+                  <div
+                    id="haldex-gen-menu"
+                    class="signal-picker-menu"
+                    role="listbox"
+                    aria-label="Haldex generation"
+                    hidden
+                  >
+                    <button
+                      type="button"
+                      class="signal-option"
+                      data-haldex-gen="1"
+                      role="option"
+                      aria-selected="false"
+                    >
+                      <span class="signal-option-main">Gen 1</span>
+                      <span class="signal-option-meta">Haldex Generation 1</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="signal-option"
+                      data-haldex-gen="2"
+                      role="option"
+                      aria-selected="false"
+                    >
+                      <span class="signal-option-main">Gen 2</span>
+                      <span class="signal-option-meta">Haldex Generation 2</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="signal-option"
+                      data-haldex-gen="4"
+                      role="option"
+                      aria-selected="false"
+                    >
+                      <span class="signal-option-main">Gen 4</span>
+                      <span class="signal-option-meta">Haldex Generation 4</span>
+                    </button>
+                    <button
+                      type="button"
+                      class="signal-option"
+                      data-haldex-gen="5"
+                      role="option"
+                      aria-selected="false"
+                    >
+                      <span class="signal-option-main">Gen 5</span>
+                      <span class="signal-option-meta">Haldex Generation 5</span>
+                    </button>
+                  </div>
+                </div>
+                <button type="button" class="setup-btn primary" id="save-profile">Save</button>
+                <button type="button" class="setup-btn secondary" id="learnStart">Calibrate</button>
+                <button type="button" class="setup-btn secondary" id="clear-mappings">
+                  Clear All
+                </button>
+              </div>
+              <p id="mapping-status" class="setup-status pending">Select generation, then save.</p>
             </section>
           </div>
         </div>
@@ -190,14 +264,17 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
               <div class="signal-workbench">
                 <div class="workbench-controls">
                   <button type="button" class="setup-btn" id="map-selected-button">
-                    Assign Input
+                    Assign To Input
                   </button>
                   <button type="button" class="setup-btn secondary" id="toggle-display-button">
-                    Add To Dashboard
+                    Assign To Dashboard
+                  </button>
+                  <button type="button" class="setup-btn secondary" id="mode-trigger-assign">
+                    Assign To Trigger
                   </button>
                 </div>
                 <p class="setup-subtle">
-                  Click a mapped input below to choose target, then assign this signal.
+                  Pick a signal, then assign it to an input, dashboard slot, or trigger.
                 </p>
               </div>
 
@@ -235,88 +312,134 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 
         <div class="grid-container">
           <div class="col-12">
-            <section class="setup-card setup-actions">
-              <div>
-                <p id="mapping-status" class="setup-status pending">
-                  Select signals to map or display.
-                </p>
-                <p class="setup-subtle">Saved profile is used by the dashboard preview.</p>
+            <section class="setup-card mode-trigger-card">
+              <div class="setup-section-head">
+                <h2>CAN Mode Trigger</h2>
+                <label class="ui-check mode-trigger-enable">
+                  <input type="checkbox" id="mode-trigger-enabled" />
+                  <span>Enabled</span>
+                </label>
               </div>
-              <div class="setup-action-buttons">
-                <button type="button" class="setup-btn secondary" id="clear-mappings">
-                  Clear All
-                </button>
-                <div id="haldex-gen-picker" class="signal-picker haldex-gen-picker">
-                  <button
-                    type="button"
-                    id="haldex-gen-toggle"
-                    class="signal-picker-toggle"
-                    aria-haspopup="listbox"
-                    aria-expanded="false"
-                    aria-label="Haldex generation"
-                  >
-                    <span id="haldex-gen-value" class="signal-picker-value">Gen 2</span>
-                    <svg
-                      class="signal-picker-caret"
-                      viewBox="0 0 24 24"
-                      fill="none"
-                      stroke="currentColor"
-                      stroke-width="2"
-                    >
-                      <polyline points="6 9 12 15 18 9" />
-                    </svg>
-                  </button>
-                  <div
-                    id="haldex-gen-menu"
-                    class="signal-picker-menu"
-                    role="listbox"
-                    aria-label="Haldex generation"
-                    hidden
-                  >
-                    <button
-                      type="button"
-                      class="signal-option"
-                      data-haldex-gen="1"
-                      role="option"
-                      aria-selected="false"
-                    >
-                      <span class="signal-option-main">Gen 1</span>
-                      <span class="signal-option-meta">Haldex Generation 1</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="signal-option"
-                      data-haldex-gen="2"
-                      role="option"
-                      aria-selected="true"
-                    >
-                      <span class="signal-option-main">Gen 2</span>
-                      <span class="signal-option-meta">Haldex Generation 2</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="signal-option"
-                      data-haldex-gen="4"
-                      role="option"
-                      aria-selected="false"
-                    >
-                      <span class="signal-option-main">Gen 4</span>
-                      <span class="signal-option-meta">Haldex Generation 4</span>
-                    </button>
-                    <button
-                      type="button"
-                      class="signal-option"
-                      data-haldex-gen="5"
-                      role="option"
-                      aria-selected="false"
-                    >
-                      <span class="signal-option-main">Gen 5</span>
-                      <span class="signal-option-meta">Haldex Generation 5</span>
-                    </button>
+
+              <div class="mode-trigger-grid">
+                <label class="ui-field">
+                  <span class="ui-field-label">Mode</span>
+                  <select id="mode-trigger-mode" class="ui-select">
+                    <option value="MAP">Map / Expert</option>
+                    <option value="5050">50:50</option>
+                    <option value="6040">60:40</option>
+                    <option value="7030">70:30</option>
+                    <option value="8020">80:20</option>
+                    <option value="9010">90:10</option>
+                    <option value="FWD">FWD</option>
+                    <option value="SPEED">Speed</option>
+                    <option value="THROTTLE">Throttle</option>
+                    <option value="RPM">RPM</option>
+                    <option value="STOCK">Stock</option>
+                  </select>
+                </label>
+                <label class="ui-field">
+                  <span class="ui-field-label">When Signal</span>
+                  <select id="mode-trigger-operator" class="ui-select">
+                    <option value="gte">&gt;=</option>
+                    <option value="gt">&gt;</option>
+                    <option value="lte">&lt;=</option>
+                    <option value="lt">&lt;</option>
+                    <option value="eq">=</option>
+                    <option value="neq">!=</option>
+                    <option value="change">changes to</option>
+                  </select>
+                </label>
+                <label class="ui-field">
+                  <span class="ui-field-label">Value</span>
+                  <input type="number" step="0.01" id="mode-trigger-value" class="ui-input" />
+                </label>
+              </div>
+
+              <label class="ui-toggle-row mode-trigger-toggle-row">
+                <input id="mode-trigger-broadcast" type="checkbox" checked />
+                <span>Broadcast Haldex status while triggered</span>
+              </label>
+
+              <ul class="workbench-list mode-trigger-signal-row">
+                <li id="mode-trigger-signal-item" class="setup-map-row mode-trigger-signal">
+                  <div class="setup-map-main">
+                    <span class="setup-map-key">Signal</span>
+                    <span id="mode-trigger-signal-name" class="setup-map-value">Not Assigned</span>
                   </div>
+                  <span id="mode-trigger-signal-value" class="setup-live-value">--</span>
+                </li>
+              </ul>
+
+              <div class="mode-trigger-footer">
+                <p id="mode-trigger-status" class="setup-status pending">
+                  Default follows the ESP/traction button signal.
+                </p>
+              </div>
+            </section>
+          </div>
+        </div>
+
+        <div class="grid-container">
+          <div class="col-12">
+            <section class="setup-card learn-card" id="learn-calibration-card">
+              <div class="setup-section-head">
+                <h2>Calibrate Haldex Output</h2>
+              </div>
+              <p class="setup-subtle">
+                Sweeps output correction from 0 to 100 percent and records actual Haldex engagement.
+                Use only when Haldex CAN data is live and controller output is enabled.
+              </p>
+              <p id="learnStatusText" class="setup-status pending">
+                Checking calibration status...
+              </p>
+
+              <div id="learnProgressWrap" class="learn-progress-wrap" hidden>
+                <div class="learn-progress-bar">
+                  <div id="learnProgressFill" class="learn-progress-fill"></div>
                 </div>
-                <button type="button" class="setup-btn primary" id="save-profile" disabled>
-                  Save Profile
+                <span id="learnProgressLabel" class="learn-progress-label">0%</span>
+              </div>
+
+              <div id="learnTrack" class="learn-track" hidden>
+                <div class="learn-bar-row">
+                  <span class="learn-bar-label">Correction Factor</span>
+                  <div class="learn-bar">
+                    <div id="learnCFFill" class="learn-bar-fill learn-bar-fill-cf"></div>
+                  </div>
+                  <span id="learnCFValue" class="learn-bar-value">0</span>
+                </div>
+                <div class="learn-bar-row">
+                  <span class="learn-bar-label">Haldex Engagement</span>
+                  <div class="learn-bar">
+                    <div id="learnEngFill" class="learn-bar-fill learn-bar-fill-eng"></div>
+                  </div>
+                  <span id="learnEngValue" class="learn-bar-value">0</span>
+                </div>
+              </div>
+
+              <div id="learnTableWrap" class="learn-table-wrap" hidden>
+                <div class="learn-table-head">
+                  <span class="learn-table-title">Learned Curve</span>
+                  <span id="learnTableStats" class="learn-table-stats"
+                    >CF 0: --, CF 50: --, CF 100: --</span
+                  >
+                </div>
+                <svg
+                  id="learnTableSvg"
+                  class="learn-table-chart"
+                  viewBox="0 0 320 180"
+                  role="img"
+                  aria-label="Learned Haldex calibration curve"
+                ></svg>
+                <p class="learn-table-caption">
+                  X-axis: correction factor sent. Y-axis: Haldex engagement returned.
+                </p>
+              </div>
+
+              <div class="learn-controls">
+                <button type="button" class="setup-btn secondary" id="learnCancel" hidden>
+                  Cancel
                 </button>
               </div>
             </section>
@@ -326,16 +449,6 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 
       <footer class="footer">
         <div>OpenHaldex-S3 &copy; SpringfieldVW.com</div>
-        <div class="version">
-          v0.6.0
-          <span class="update-available">
-            <svg viewBox="0 0 16 16">
-              <circle cx="8" cy="8" r="7" fill="currentColor" />
-              <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="white" stroke-width="1.5" />
-            </svg>
-            new version available
-          </span>
-        </div>
       </footer>
     </div>
     <script src="./app.js"></script>

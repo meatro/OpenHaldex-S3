@@ -2,6 +2,7 @@
 
 #include <Arduino.h>
 #include <driver/twai.h>
+#include <string.h>
 
 #include "functions/config/config.h"
 #include "functions/config/pins.h"
@@ -44,23 +45,103 @@ static void writeEEP(void* arg) {
     vTaskDelay(OH_EEP_REFRESH_MS / portTICK_PERIOD_MS);
   }
 }
+
+static void haldexLearnTask(void* arg) {
+  (void)arg;
+  const uint32_t settle_ms = 300;
+  uint8_t last_valid = 0;
+
+  for (uint16_t cf = 0; cf <= 100; cf++) {
+    if (haldexLearnCancel) {
+      break;
+    }
+
+    haldexLearnStep = (uint8_t)cf;
+    haldexLearnCF = (uint8_t)cf;
+
+    vTaskDelay(settle_ms / portTICK_PERIOD_MS);
+
+    uint8_t engagement = constrain(received_haldex_engagement, 0, 100);
+    if (engagement == 0 && cf > 0) {
+      engagement = last_valid;
+    } else {
+      last_valid = engagement;
+    }
+
+    haldexLearnTable[cf] = engagement;
+  }
+
+  if (!haldexLearnCancel) {
+    bool any_non_zero = false;
+    for (uint8_t i = 0; i <= 100; i++) {
+      if (haldexLearnTable[i] > 0) {
+        any_non_zero = true;
+        break;
+      }
+    }
+    haldexLearnTableValid = any_non_zero;
+    haldexLearnStep = haldexLearnTableValid ? 101 : 102;
+    filelogLogEvent("learn", haldexLearnTableValid ? "Haldex learn complete" : "Haldex learn invalid or no response");
+  } else {
+    haldexLearnTableValid = false;
+    filelogLogEvent("learn", "Haldex learn cancelled");
+  }
+
+  haldexLearnActive = false;
+  haldexLearnCF = 0;
+  if (haldexLearnRestorePending) {
+    disableController = haldexLearnRestoreDisableController;
+    state.mode = haldexLearnRestoreMode;
+    lastMode = haldexLearnRestoreLastMode;
+    haldexLearnRestorePending = false;
+  }
+  storageMarkDirty();
+  vTaskDelete(NULL);
+}
+
+void startHaldexLearn() {
+  if (haldexLearnActive) {
+    return;
+  }
+
+  memset(haldexLearnTable, 0, sizeof(haldexLearnTable));
+  haldexLearnTableValid = false;
+  haldexLearnCancel = false;
+  haldexLearnStep = 0;
+  haldexLearnCF = 0;
+  haldexLearnActive = true;
+  filelogLogEvent("learn", "Haldex learn started");
+
+  if (xTaskCreatePinnedToCore(haldexLearnTask, "haldexLearn", 4096, nullptr, 1, nullptr, OH_APP_TASK_CORE) != pdPASS) {
+    haldexLearnActive = false;
+    haldexLearnStep = 102;
+    if (haldexLearnRestorePending) {
+      disableController = haldexLearnRestoreDisableController;
+      state.mode = haldexLearnRestoreMode;
+      lastMode = haldexLearnRestoreLastMode;
+      haldexLearnRestorePending = false;
+    }
+    filelogLogError("learn", "Failed to start Haldex learn task");
+  }
+}
+
 void tasksInit() {
   // Create FreeRTOS tasks for periodic operations
   // Tasks handle CAN frame transmission at different rates and EEPROM writes
-  xTaskCreate(showHaldexState, "showHaldexState", 5000, NULL, 1, NULL);
-  xTaskCreate(updateLabels, "updateLabels", 6000, NULL, 2, NULL);
+  xTaskCreatePinnedToCore(showHaldexState, "showHaldexState", 5000, NULL, 1, NULL, OH_APP_TASK_CORE);
+  xTaskCreatePinnedToCore(updateLabels, "updateLabels", 6000, NULL, 2, NULL, OH_APP_TASK_CORE);
 #if OH_ENABLE_EEP_TASK
-  xTaskCreate(writeEEP, "writeEEP", 4096, NULL, 3, NULL);
+  xTaskCreatePinnedToCore(writeEEP, "writeEEP", 4096, NULL, 3, NULL, OH_APP_TASK_CORE);
 #endif
-  xTaskCreate(updateTriggers, "updateTriggers", 2000, NULL, 4, NULL);
+  xTaskCreatePinnedToCore(updateTriggers, "updateTriggers", 2000, NULL, 4, NULL, OH_CAN_TASK_CORE);
 
   if (can_ready) {
-    xTaskCreate(frames1000, "frames1000", 8000, NULL, 5, &handle_frames1000);
-    xTaskCreate(frames200, "frames200", 8000, NULL, 6, &handle_frames200);
-    xTaskCreate(frames100, "frames100", 8000, NULL, 7, &handle_frames100);
-    xTaskCreate(frames25, "frames25", 8000, NULL, 8, &handle_frames25);
-    xTaskCreate(frames20, "frames20", 8000, NULL, 9, &handle_frames20);
-    xTaskCreate(frames10, "frames10", 8000, NULL, 10, &handle_frames10);
+    xTaskCreatePinnedToCore(frames1000, "frames1000", 8000, NULL, 5, &handle_frames1000, OH_CAN_TASK_CORE);
+    xTaskCreatePinnedToCore(frames200, "frames200", 8000, NULL, 6, &handle_frames200, OH_CAN_TASK_CORE);
+    xTaskCreatePinnedToCore(frames100, "frames100", 8000, NULL, 7, &handle_frames100, OH_CAN_TASK_CORE);
+    xTaskCreatePinnedToCore(frames25, "frames25", 8000, NULL, 8, &handle_frames25, OH_CAN_TASK_CORE);
+    xTaskCreatePinnedToCore(frames20, "frames20", 8000, NULL, 9, &handle_frames20, OH_CAN_TASK_CORE);
+    xTaskCreatePinnedToCore(frames10, "frames10", 8000, NULL, 10, &handle_frames10, OH_CAN_TASK_CORE);
 
     if (!isStandalone) {
       vTaskSuspend(handle_frames1000);
@@ -72,9 +153,9 @@ void tasksInit() {
       filelogLogInfo("tasks", "Standalone disabled; generated frame tasks suspended");
     }
 
-    xTaskCreate(broadcastOpenHaldex, "broadcastOpenHaldex", 4096, NULL, 6, NULL);
-    xTaskCreate(parseCAN_hdx, "parseHaldex", 4096, NULL, 6, NULL);
-    xTaskCreate(parseCAN_chs, "parseChassis", 4096, NULL, 7, NULL);
+    xTaskCreatePinnedToCore(broadcastOpenHaldex, "broadcastOpenHaldex", 4096, NULL, 6, NULL, OH_CAN_TASK_CORE);
+    xTaskCreatePinnedToCore(parseCAN_hdx, "parseHaldex", 4096, NULL, 6, NULL, OH_CAN_TASK_CORE);
+    xTaskCreatePinnedToCore(parseCAN_chs, "parseChassis", 4096, NULL, 7, NULL, OH_CAN_TASK_CORE);
     filelogLogInfo("tasks", "CAN tasks initialized");
   } else {
     filelogLogError("tasks", "CAN not ready; frame/parser tasks not started");

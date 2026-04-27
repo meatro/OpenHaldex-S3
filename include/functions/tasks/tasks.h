@@ -3,6 +3,7 @@
 #include <Arduino.h>
 
 void tasksInit();
+void startHaldexLearn();
 
 // Individual task entry points (FreeRTOS)
 void updateTriggers(void* arg);

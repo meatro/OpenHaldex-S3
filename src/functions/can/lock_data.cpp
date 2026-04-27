@@ -31,7 +31,7 @@ void getLockData(twai_message_t& rx_message_chs) {
       appliedTorque = rx_message_chs.data[6];
       // rx_message_chs.data[6] = get_lock_target_adjusted_value(0x16, false);  // set to a low value to control the
       // req. transfer torque.  Main control value for Gen1
-      switch (state.mode) {
+      switch (openhaldexEffectiveMode()) {
       case MODE_FWD:
         appliedTorque = get_lock_target_adjusted_value(0xFE, true); // return 0xFE to disable
         break;

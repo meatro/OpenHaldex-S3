@@ -145,7 +145,6 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
                 <h2>Torque Request Table</h2>
               </div>
               <table id="mapTable" class="map-matrix" aria-label="Torque map editor table"></table>
-              <p class="map-subtle">Click a speed header to pick a column for shaping.</p>
             </section>
           </div>
 
@@ -285,11 +284,6 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
                   <button type="button" id="btnSaveMapDisengage" class="map-btn">
                     Save Mode Settings
                   </button>
-                  <span class="map-subtle map-disengage-note"
-                    >Use Enable toggles to apply each gate while keeping your typed values saved for
-                    later. Full throttle bypasses low-speed disengage for launch control. Other
-                    values here are shared across all dynamic modes.</span
-                  >
                 </div>
               </details>
 
@@ -306,6 +300,25 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
                   </div>
                 </div>
               </details>
+
+              <details class="ui-details map-details" data-detail="map-notes">
+                <summary>Notes</summary>
+                <ul class="map-notes-list">
+                  <li>Click a table header to select a column for shaping.</li>
+                  <li>
+                    Map axes use the mapped Speed and Throttle input slots. Advanced users can
+                    assign those slots to any decoded CAN signal in Setup, then edit bins and table
+                    values to match.
+                  </li>
+                  <li>
+                    Mode behavior values are shared across dynamic modes. Full throttle bypasses
+                    low-speed disengage for launch control.
+                  </li>
+                  <li>
+                    Enable toggles apply each gate while keeping typed values saved for later.
+                  </li>
+                </ul>
+              </details>
             </section>
           </div>
         </div>
@@ -313,16 +326,6 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 
       <footer class="footer">
         <div>OpenHaldex-S3 &copy; SpringfieldVW.com</div>
-        <div class="version">
-          v0.6.0
-          <span class="update-available">
-            <svg viewBox="0 0 16 16">
-              <circle cx="8" cy="8" r="7" fill="currentColor" />
-              <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="white" stroke-width="1.5" />
-            </svg>
-            new version available
-          </span>
-        </div>
       </footer>
     </div>
     <script src="./app.js"></script>

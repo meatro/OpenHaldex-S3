@@ -101,9 +101,18 @@ function initMapPage() {
   }
 
   function summarizeMapModeSettings(settings) {
-    const disengage = settings.disengage > 0 ? `Disengage below ${settings.disengage} km/h.` : "Disengage disabled.";
-    const throttleGate = settings.disableThrottle > 0 ? `Throttle >= ${settings.disableThrottle}%.` : "Throttle gate off.";
-    const speedGate = settings.disableSpeed > 0 ? `Disable above ${settings.disableSpeed} km/h.` : "High-speed gate off.";
+    const disengage =
+      settings.disengage > 0
+        ? `Disengage below ${settings.disengage} km/h.`
+        : "Disengage disabled.";
+    const throttleGate =
+      settings.disableThrottle > 0
+        ? `Throttle >= ${settings.disableThrottle}%.`
+        : "Throttle gate off.";
+    const speedGate =
+      settings.disableSpeed > 0
+        ? `Disable above ${settings.disableSpeed} km/h.`
+        : "High-speed gate off.";
     const broadcast = settings.broadcastOpenHaldexOverCAN ? "Bridge on." : "Bridge off.";
     const controller = settings.disableController ? "Controller off." : "Controller on.";
     return `${disengage} ${throttleGate} ${speedGate} ${broadcast} ${controller}`;
@@ -114,8 +123,10 @@ function initMapPage() {
     setMapDisengageValue(disengage || 0);
     setMapThrottleGateValue(data ? data.disableThrottle : 0);
     setMapSpeedGateValue(data ? data.disableSpeed : 0);
-    if (mapBroadcastToggle) mapBroadcastToggle.checked = !data || data.broadcastOpenHaldexOverCAN !== false;
-    if (mapControllerToggle) mapControllerToggle.checked = !data || !Boolean(data.disableController);
+    if (mapBroadcastToggle)
+      mapBroadcastToggle.checked = !data || data.broadcastOpenHaldexOverCAN !== false;
+    if (mapControllerToggle)
+      mapControllerToggle.checked = !data || !Boolean(data.disableController);
     return {
       disengage: getMapDisengageValue(),
       disableThrottle: getMapThrottleGateValue(),
@@ -190,7 +201,8 @@ function initMapPage() {
   function applyCellColor(cell, value) {
     if (!cell) return;
     const v = Math.max(0, Math.min(100, parseInt(value || 0, 10)));
-    const isLight = document.body && document.body.dataset && document.body.dataset.theme === "light";
+    const isLight =
+      document.body && document.body.dataset && document.body.dataset.theme === "light";
     const styles = window.getComputedStyle(document.body);
     const brandRgb = (styles.getPropertyValue("--brand-rgb") || "").trim();
     const textColor = (styles.getPropertyValue("--text") || "").trim();
@@ -1115,10 +1127,14 @@ function initOtaPage() {
           : "No saved hotspot";
       }
       if (wifiApStatus) {
-        wifiApStatus.textContent = data.apPasswordSet ? "AP password is set" : "AP is open (no password)";
+        wifiApStatus.textContent = data.apPasswordSet
+          ? "AP password is set"
+          : "AP is open (no password)";
       }
       if (wifiStatus) {
-        wifiStatus.textContent = data.ssid ? `Saved SSID: ${data.ssid} | ${apMode}` : `No saved hotspot | ${apMode}`;
+        wifiStatus.textContent = data.ssid
+          ? `Saved SSID: ${data.ssid} | ${apMode}`
+          : `No saved hotspot | ${apMode}`;
       }
     } catch (e) {
       if (wifiStaStatus) wifiStaStatus.textContent = "STA fetch failed: " + e.message;

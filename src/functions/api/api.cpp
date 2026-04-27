@@ -2,6 +2,8 @@
 #include <ArduinoJson.h>
 #include <WiFi.h>
 #include <ESPAsyncWebServer.h>
+#include <math.h>
+#include <string.h>
 
 #include "functions/api/api.h"
 #include "functions/core/state.h"
@@ -11,6 +13,7 @@
 #include "functions/canview/canview.h"
 #include "functions/can/can_id.h"
 #include "functions/net/update.h"
+#include "functions/tasks/tasks.h"
 
 extern bool wifiInternetOk();
 extern void wifiApplySettings();
@@ -31,12 +34,15 @@ static bool canview_capture_active = false;
 static bool canview_capture_prev_valid = false;
 static bool canview_capture_prev_disable_controller = false;
 static bool canview_capture_prev_broadcast = true;
+static bool canview_capture_prev_mode_trigger_suppressed = false;
 static openhaldex_mode_t canview_capture_prev_mode = MODE_STOCK;
 
 static void canviewCaptureApplySafeState() {
   disableController = true;
   state.mode = MODE_STOCK;
   broadcastOpenHaldexOverCAN = true;
+  modeTriggerSuppressed = true;
+  modeTriggerRuntimeReset();
 }
 
 static void sendJson(AsyncWebServerRequest* request, int code, const JsonDocument& doc) {
@@ -134,7 +140,7 @@ static bool parseModeName(const String& mode_raw, openhaldex_mode_t& out_mode) {
     out_mode = MODE_RPM;
     return true;
   }
-  if (mode == "MAP") {
+  if (mode == "MAP" || mode == "EXPERT") {
     out_mode = MODE_MAP;
     return true;
   }
@@ -150,6 +156,137 @@ static String sanitizeMappedSignalKey(const String& raw) {
   return value;
 }
 
+static String mappingKeySignalToken(const char* value) {
+  String token = String(value ? value : "");
+  token.replace("_", " ");
+  token.trim();
+  token.toLowerCase();
+  return token;
+}
+
+static String mappingKeyUnitToken(const char* value) {
+  String token = String(value ? value : "");
+  token.trim();
+  token.toLowerCase();
+  return token;
+}
+
+static String buildMappedSignalKey(const char* bus, uint32_t frame_id, const char* signal_name, const char* unit) {
+  String key = String(bus ? bus : "chassis");
+  key.trim();
+  key.toLowerCase();
+  key += "|0x";
+  key += String(frame_id, HEX);
+  key += "|";
+  key += mappingKeySignalToken(signal_name);
+  key += "|";
+  key += mappingKeyUnitToken(unit);
+  return key;
+}
+
+static bool getRecommendedInputMappingsForGeneration(uint8_t generation, String& speed, String& throttle, String& rpm) {
+  switch (generation) {
+  case 1:
+  case 2:
+  case 4:
+    speed = buildMappedSignalKey("chassis", BRAKES1_ID, "BR1_Wheel_Speed_kmh", "km/h");
+    throttle = buildMappedSignalKey("chassis", MOTOR1_ID, "Pedal_Value_or_Throttle_Plate", "%");
+    rpm = buildMappedSignalKey("chassis", MOTOR1_ID, "Engine_RPM", "rpm");
+    return true;
+  case 5:
+    speed = buildMappedSignalKey("chassis", ESP_21, "ESP_v_Signal", "Unit_KiloMeterPerHour");
+    throttle = buildMappedSignalKey("chassis", MOTOR_20, "MO_Fahrpedalrohwert_01", "Unit_PerCent");
+    rpm = buildMappedSignalKey("chassis", MOTOR_12, "MO_Drehzahl_01", "Unit_MinutInver");
+    return true;
+  default:
+    speed = "";
+    throttle = "";
+    rpm = "";
+    return false;
+  }
+}
+
+static bool getRecommendedModeTriggerForGeneration(uint8_t generation, mode_trigger_config_t& trigger) {
+  trigger.enabled = false;
+  trigger.op = MODE_TRIGGER_GTE;
+  trigger.value = 1.0f;
+  trigger.mode = MODE_MAP;
+  trigger.broadcastOpenHaldexOverCAN = broadcastOpenHaldexOverCAN;
+
+  switch (generation) {
+  case 1:
+  case 2:
+  case 4:
+    trigger.signal = buildMappedSignalKey("chassis", BRAKES1_ID, "BR1_ESP_ASR_Passive", "");
+    return true;
+  case 5:
+    trigger.signal = buildMappedSignalKey("chassis", ESP_21, "ESP_Tastung_passiv", "");
+    return true;
+  default:
+    trigger.signal = "";
+    return false;
+  }
+}
+
+static bool isRecommendedModeTriggerSignal(const String& signal) {
+  mode_trigger_config_t pq = {};
+  mode_trigger_config_t mqb = {};
+  (void)getRecommendedModeTriggerForGeneration(2, pq);
+  (void)getRecommendedModeTriggerForGeneration(5, mqb);
+  return signal == pq.signal || signal == mqb.signal;
+}
+
+static bool seedModeTriggerForGeneration(uint8_t generation, mode_trigger_config_t& trigger,
+                                         bool overwrite_known_default) {
+  mode_trigger_config_t recommended = {};
+  if (!getRecommendedModeTriggerForGeneration(generation, recommended)) {
+    return false;
+  }
+
+  const bool should_seed =
+    trigger.signal.length() == 0 || (overwrite_known_default && isRecommendedModeTriggerSignal(trigger.signal));
+  if (!should_seed) {
+    return false;
+  }
+
+  const bool changed = trigger.signal != recommended.signal;
+  trigger.signal = recommended.signal;
+  if (trigger.op >= mode_trigger_operator_t_MAX) {
+    trigger.op = recommended.op;
+  }
+  if (!isfinite(trigger.value)) {
+    trigger.value = recommended.value;
+  }
+  if (trigger.mode >= openhaldex_mode_t_MAX) {
+    trigger.mode = recommended.mode;
+  }
+  return changed;
+}
+
+static bool seedMissingInputMappingsForGeneration(uint8_t generation, String& speed, String& throttle, String& rpm) {
+  String default_speed;
+  String default_throttle;
+  String default_rpm;
+  if (!getRecommendedInputMappingsForGeneration(generation, default_speed, default_throttle, default_rpm)) {
+    return false;
+  }
+
+  bool changed = false;
+  if (!speed.length()) {
+    speed = default_speed;
+    changed = true;
+  }
+  if (!throttle.length()) {
+    throttle = default_throttle;
+    changed = true;
+  }
+  if (!rpm.length()) {
+    rpm = default_rpm;
+    changed = true;
+  }
+  return changed;
+}
+
 static bool inputsMappedForControl() {
   return mappedInputSignalsConfigured();
 }
@@ -160,6 +297,69 @@ static void getMappedInputSnapshot(String& speed, String& throttle, String& rpm)
     throttle = "";
     rpm = "";
   }
+}
+
+static void getDashboardSignalSnapshot(String* slots) {
+  if (!slots || !dashboardSignalsGet(slots, DASHBOARD_SIGNAL_SLOT_COUNT, 2)) {
+    for (size_t i = 0; i < DASHBOARD_SIGNAL_SLOT_COUNT; i++) {
+      slots[i] = "";
+    }
+  }
+}
+
+static String dashboardSignalLabelFromKey(const String& raw) {
+  String value = raw;
+  value.trim();
+  const int first = value.indexOf('|');
+  const int second = (first >= 0) ? value.indexOf('|', first + 1) : -1;
+  const int third = (second >= 0) ? value.indexOf('|', second + 1) : -1;
+  if (second >= 0 && third > second) {
+    value = value.substring(second + 1, third);
+  }
+  value.replace("_", " ");
+  value.trim();
+  return value;
+}
+
+static String formatDashboardNumericValue(float value, const String& unit, const String& signal_name) {
+  float display_value = value;
+  String normalized_unit = unit;
+  normalized_unit.trim();
+  normalized_unit.toLowerCase();
+  String normalized_name = signal_name;
+  normalized_name.trim();
+  normalized_name.toLowerCase();
+
+  if ((normalized_unit == "rpm" || normalized_name.indexOf("rpm") >= 0) && fabsf(display_value) > 0.0f &&
+      fabsf(display_value) < 20.0f) {
+    const float scaled = display_value * 100.0f;
+    if (fabsf(scaled) >= 100.0f && fabsf(scaled) <= 12000.0f) {
+      display_value = scaled;
+    }
+  }
+
+  String rendered;
+  const float magnitude = fabsf(display_value);
+  if (normalized_unit == "rpm") {
+    rendered = (magnitude >= 20.0f) ? String(lroundf(display_value)) : String(display_value, 2);
+  } else if (magnitude >= 1000.0f) {
+    rendered = String(lroundf(display_value));
+  } else if (magnitude >= 100.0f) {
+    rendered = String(display_value, 1);
+  } else {
+    rendered = String(display_value, 2);
+  }
+
+  while (rendered.endsWith("0")) {
+    rendered.remove(rendered.length() - 1);
+  }
+  if (rendered.endsWith(".")) {
+    rendered.remove(rendered.length() - 1);
+  }
+  if (!unit.length()) {
+    return rendered;
+  }
+  return rendered + " " + unit;
 }
 
 static void applyRuntimeMode(openhaldex_mode_t mode) {
@@ -173,8 +373,10 @@ static void handleStatus(AsyncWebServerRequest* request) {
 
   doc["version"] = OPENHALDEX_VERSION;
   doc["mode"] = modeName(state.mode);
+  doc["effectiveMode"] = modeName(openhaldexEffectiveMode());
   doc["disableController"] = disableController;
   doc["broadcastOpenHaldexOverCAN"] = broadcastOpenHaldexOverCAN;
+  doc["effectiveBroadcastOpenHaldexOverCAN"] = openhaldexEffectiveBroadcastOpenHaldexOverCAN();
   doc["canviewCaptureMode"] = canview_capture_active;
   doc["haldexGeneration"] = haldexGeneration;
   doc["disableThrottle"] = disableThrottle;
@@ -223,6 +425,12 @@ static void handleStatus(AsyncWebServerRequest* request) {
   frameDiag["lockTarget"] = lock_target;
   frameDiag["haldexGen"] = haldexGeneration;
 
+  JsonObject learn = doc["learn"].to<JsonObject>();
+  learn["active"] = (bool)haldexLearnActive;
+  learn["tableValid"] = haldexLearnTableValid;
+  learn["progress"] = (uint8_t)haldexLearnStep;
+  learn["currentCF"] = (uint8_t)haldexLearnCF;
+
   String mapped_speed;
   String mapped_throttle;
   String mapped_rpm;
@@ -232,6 +440,70 @@ static void handleStatus(AsyncWebServerRequest* request) {
   inputMappings["speed"] = mapped_speed;
   inputMappings["throttle"] = mapped_throttle;
   inputMappings["rpm"] = mapped_rpm;
+
+  mode_trigger_config_t mode_trigger_config = {};
+  if (!modeTriggerConfigGet(mode_trigger_config, 2)) {
+    (void)getRecommendedModeTriggerForGeneration(haldexGeneration, mode_trigger_config);
+  }
+  mode_trigger_config_t default_trigger = {};
+  const bool has_default_trigger = getRecommendedModeTriggerForGeneration(haldexGeneration, default_trigger);
+  const String mode_trigger_signal = mode_trigger_config.signal.length() > 0
+                                       ? mode_trigger_config.signal
+                                       : (has_default_trigger ? default_trigger.signal : "");
+  mode_trigger_runtime_t mode_trigger_runtime = {};
+  modeTriggerRuntimeGet(mode_trigger_runtime);
+  JsonObject modeTrigger = doc["modeTrigger"].to<JsonObject>();
+  modeTrigger["enabled"] = mode_trigger_config.enabled;
+  modeTrigger["signal"] = mode_trigger_signal;
+  modeTrigger["defaultSignal"] = has_default_trigger ? default_trigger.signal : "";
+  modeTrigger["operator"] = modeTriggerOperatorName(mode_trigger_config.op);
+  modeTrigger["value"] = mode_trigger_config.value;
+  modeTrigger["mode"] = modeName(mode_trigger_config.mode);
+  modeTrigger["broadcastOpenHaldexOverCAN"] = mode_trigger_config.broadcastOpenHaldexOverCAN;
+  modeTrigger["active"] = mode_trigger_runtime.active;
+  modeTrigger["seen"] = mode_trigger_runtime.seen;
+  modeTrigger["lastValue"] = mode_trigger_runtime.lastValue;
+  modeTrigger["ageMs"] = mode_trigger_runtime.ageMs;
+  modeTrigger["effectiveMode"] = modeName(openhaldexEffectiveMode());
+  modeTrigger["effectiveBroadcastOpenHaldexOverCAN"] = openhaldexEffectiveBroadcastOpenHaldexOverCAN();
+
+  String dashboard_slots[DASHBOARD_SIGNAL_SLOT_COUNT];
+  getDashboardSignalSnapshot(dashboard_slots);
+
+  JsonObject dashMappings = doc["dashMappings"].to<JsonObject>();
+  JsonArray dashboardSignals = doc["dashboardSignals"].to<JsonArray>();
+  for (size_t i = 0; i < DASHBOARD_SIGNAL_SLOT_COUNT; i++) {
+    const String slot_key = String("dash_") + String(i + 1);
+    dashMappings[slot_key] = dashboard_slots[i];
+
+    JsonObject slot = dashboardSignals.add<JsonObject>();
+    slot["slot"] = slot_key;
+    slot["signalId"] = dashboard_slots[i];
+    const bool mapped = dashboard_slots[i].length() > 0;
+    slot["mapped"] = mapped;
+
+    canview_resolved_signal_t resolved = {};
+    const bool found = mapped && canviewResolveMappedSignal(dashboard_slots[i], resolved);
+    const String label = found ? String(resolved.name) : dashboardSignalLabelFromKey(dashboard_slots[i]);
+    slot["found"] = found;
+    slot["label"] = label;
+    slot["bus"] = found ? resolved.bus : "";
+    slot["dir"] = found ? resolved.dir : "";
+    slot["unit"] = found ? resolved.unit : "";
+    slot["generated"] = found ? resolved.generated : false;
+    slot["ageMs"] = found ? resolved.ageMs : 0;
+    if (found && resolved.numeric) {
+      slot["numeric"] = true;
+      slot["value"] = resolved.numericValue;
+      slot["display"] = formatDashboardNumericValue(resolved.numericValue, resolved.unit, resolved.name);
+    } else if (found) {
+      slot["numeric"] = false;
+      slot["display"] = resolved.textValue;
+    } else {
+      slot["numeric"] = false;
+      slot["display"] = "--";
+    }
+  }
 
   JsonObject disengage = doc["disengageUnderSpeed"].to<JsonObject>();
   disengage["map"] = disengageUnderSpeedMap;
@@ -261,6 +533,79 @@ static void handleStatus(AsyncWebServerRequest* request) {
   addFrameDiag("brakes3", BRAKES3_ID);
 
   sendJson(request, 200, doc);
+}
+
+static void handleLearnStatus(AsyncWebServerRequest* request) {
+  JsonDocument doc;
+  doc["active"] = (bool)haldexLearnActive;
+  doc["progress"] = (uint8_t)haldexLearnStep;
+  doc["tableValid"] = haldexLearnTableValid;
+  doc["currentCF"] = (uint8_t)haldexLearnCF;
+  doc["currentEng"] = received_haldex_engagement;
+
+  if (haldexLearnTableValid) {
+    JsonArray table = doc["table"].to<JsonArray>();
+    for (uint8_t i = 0; i <= 100; i++) {
+      table.add(haldexLearnTable[i]);
+    }
+  }
+
+  sendJson(request, 200, doc);
+}
+
+static void sendLearnResponse(AsyncWebServerRequest* request, bool ok, const char* error = nullptr) {
+  JsonDocument doc;
+  doc["ok"] = ok;
+  if (error) {
+    doc["error"] = error;
+  }
+  sendJson(request, 200, doc);
+}
+
+static void handleLearnStart(AsyncWebServerRequest* request) {
+  if (haldexLearnActive) {
+    JsonDocument doc;
+    doc["ok"] = true;
+    doc["alreadyActive"] = true;
+    sendJson(request, 200, doc);
+    return;
+  }
+  if (canview_capture_active) {
+    sendLearnResponse(request, false, "CAN View capture is active");
+    return;
+  }
+  if (!hasCANHaldex) {
+    sendLearnResponse(request, false, "No Haldex CAN data available");
+    return;
+  }
+
+  if (disableController || state.mode == MODE_STOCK) {
+    haldexLearnRestorePending = true;
+    haldexLearnRestoreDisableController = disableController;
+    haldexLearnRestoreMode = state.mode;
+    haldexLearnRestoreLastMode = lastMode;
+    disableController = false;
+    state.mode = MODE_5050;
+    lastMode = MODE_5050;
+  }
+
+  startHaldexLearn();
+  sendLearnResponse(request, (bool)haldexLearnActive, haldexLearnActive ? nullptr : "Failed to start learn task");
+}
+
+static void handleLearnCancel(AsyncWebServerRequest* request) {
+  haldexLearnCancel = true;
+  sendLearnResponse(request, true);
+}
+
+static void handleLearnClear(AsyncWebServerRequest* request) {
+  haldexLearnCancel = true;
+  haldexLearnTableValid = false;
+  haldexLearnStep = 0;
+  haldexLearnCF = 0;
+  memset(haldexLearnTable, 0, sizeof(haldexLearnTable));
+  storageMarkDirty();
+  sendLearnResponse(request, true);
 }
 
 static void handleModeJson(AsyncWebServerRequest* request, const String& body) {
@@ -316,6 +661,12 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
   String mapped_throttle;
   String mapped_rpm;
   getMappedInputSnapshot(mapped_speed, mapped_throttle, mapped_rpm);
+  String dashboard_slots[DASHBOARD_SIGNAL_SLOT_COUNT];
+  getDashboardSignalSnapshot(dashboard_slots);
+  mode_trigger_config_t mode_trigger_config = {};
+  if (!modeTriggerConfigGet(mode_trigger_config, 2)) {
+    (void)getRecommendedModeTriggerForGeneration(haldexGeneration, mode_trigger_config);
+  }
 
   bool disable_controller_set = false;
   bool next_disable_controller = disableController;
@@ -351,6 +702,9 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
   uint16_t next_disengage_rpm_mode = disengageUnderSpeedRpmMode;
   bool lock_release_rate_set = false;
   float next_lock_release_rate = lockReleaseRatePctPerSec;
+  bool dashboard_mappings_changed = false;
+  bool mode_trigger_changed = false;
+  mode_trigger_config_t next_mode_trigger = mode_trigger_config;
 
   if (doc.containsKey("inputMappings")) {
     JsonObject inputMappings = doc["inputMappings"].as<JsonObject>();
@@ -504,11 +858,109 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
     }
   }
 
+  if (doc.containsKey("dashMappings")) {
+    JsonObject dashMappings = doc["dashMappings"].as<JsonObject>();
+    if (dashMappings.isNull()) {
+      sendError(request, 400, "invalid dashMappings");
+      return;
+    }
+
+    for (size_t i = 0; i < DASHBOARD_SIGNAL_SLOT_COUNT; i++) {
+      const String slot_key = String("dash_") + String(i + 1);
+      if (dashMappings.containsKey(slot_key)) {
+        dashboard_slots[i] = sanitizeMappedSignalKey(dashMappings[slot_key] | "");
+        dashboard_mappings_changed = true;
+      }
+    }
+  }
+
+  if (doc.containsKey("modeTrigger")) {
+    JsonObject trigger = doc["modeTrigger"].as<JsonObject>();
+    if (trigger.isNull()) {
+      sendError(request, 400, "invalid modeTrigger");
+      return;
+    }
+
+    if (trigger.containsKey("enabled")) {
+      next_mode_trigger.enabled = (bool)trigger["enabled"];
+      mode_trigger_changed = true;
+    }
+    if (trigger.containsKey("signal")) {
+      next_mode_trigger.signal = sanitizeMappedSignalKey(trigger["signal"] | "");
+      mode_trigger_changed = true;
+    }
+    if (trigger.containsKey("operator")) {
+      mode_trigger_operator_t op = MODE_TRIGGER_GTE;
+      if (!modeTriggerOperatorFromString(String(trigger["operator"] | ""), op)) {
+        sendError(request, 400, "invalid modeTrigger.operator");
+        return;
+      }
+      next_mode_trigger.op = op;
+      mode_trigger_changed = true;
+    }
+    if (trigger.containsKey("value")) {
+      float value = trigger["value"] | 0.0f;
+      if (!isfinite(value)) {
+        sendError(request, 400, "invalid modeTrigger.value");
+        return;
+      }
+      if (value < -1000000.0f)
+        value = -1000000.0f;
+      if (value > 1000000.0f)
+        value = 1000000.0f;
+      next_mode_trigger.value = value;
+      mode_trigger_changed = true;
+    }
+    if (trigger.containsKey("mode")) {
+      openhaldex_mode_t mode = MODE_MAP;
+      if (!parseModeName(String(trigger["mode"] | ""), mode)) {
+        sendError(request, 400, "invalid modeTrigger.mode");
+        return;
+      }
+      next_mode_trigger.mode = mode;
+      mode_trigger_changed = true;
+    }
+    if (trigger.containsKey("broadcastOpenHaldexOverCAN")) {
+      next_mode_trigger.broadcastOpenHaldexOverCAN = (bool)trigger["broadcastOpenHaldexOverCAN"];
+      mode_trigger_changed = true;
+    }
+  }
+
+  const uint8_t effective_haldex_generation = haldex_generation_set ? next_haldex_generation : haldexGeneration;
+  if ((mappings_changed || haldex_generation_set) &&
+      seedMissingInputMappingsForGeneration(effective_haldex_generation, mapped_speed, mapped_throttle, mapped_rpm)) {
+    mappings_changed = true;
+  }
+  if (haldex_generation_set &&
+      seedModeTriggerForGeneration(effective_haldex_generation, next_mode_trigger, !mode_trigger_changed)) {
+    mode_trigger_changed = true;
+  } else if (mode_trigger_changed && next_mode_trigger.signal.length() == 0) {
+    (void)seedModeTriggerForGeneration(effective_haldex_generation, next_mode_trigger, false);
+  }
+
   if (mappings_changed) {
     if (!mappedInputSignalsSet(mapped_speed, mapped_throttle, mapped_rpm, 20)) {
       sendError(request, 503, "mapping update busy");
       return;
     }
+    dirty = true;
+  }
+
+  if (dashboard_mappings_changed) {
+    if (!dashboardSignalsSet(dashboard_slots, DASHBOARD_SIGNAL_SLOT_COUNT, 20)) {
+      sendError(request, 503, "dashboard mapping update busy");
+      return;
+    }
+    dirty = true;
+  }
+
+  if (mode_trigger_changed) {
+    if (!modeTriggerConfigSet(next_mode_trigger, 20)) {
+      sendError(request, 503, "mode trigger update busy");
+      return;
+    }
+    modeTriggerRuntimeReset();
+    mode_trigger_config = next_mode_trigger;
     dirty = true;
   }
 
@@ -636,6 +1088,34 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
   resp["ok"] = true;
   resp["debugCaptureActive"] = loggingDebugCaptureActive();
   resp["disableController"] = disableController;
+  resp["broadcastOpenHaldexOverCAN"] = broadcastOpenHaldexOverCAN;
+  resp["effectiveBroadcastOpenHaldexOverCAN"] = openhaldexEffectiveBroadcastOpenHaldexOverCAN();
+  resp["haldexGeneration"] = haldexGeneration;
+  JsonObject respMappings = resp["inputMappings"].to<JsonObject>();
+  respMappings["speed"] = mapped_speed;
+  respMappings["throttle"] = mapped_throttle;
+  respMappings["rpm"] = mapped_rpm;
+  mode_trigger_config_t resp_default_trigger = {};
+  const bool resp_has_default_trigger = getRecommendedModeTriggerForGeneration(haldexGeneration, resp_default_trigger);
+  const String resp_mode_trigger_signal = mode_trigger_config.signal.length() > 0
+                                            ? mode_trigger_config.signal
+                                            : (resp_has_default_trigger ? resp_default_trigger.signal : "");
+  mode_trigger_runtime_t resp_mode_trigger_runtime = {};
+  modeTriggerRuntimeGet(resp_mode_trigger_runtime);
+  JsonObject respTrigger = resp["modeTrigger"].to<JsonObject>();
+  respTrigger["enabled"] = mode_trigger_config.enabled;
+  respTrigger["signal"] = resp_mode_trigger_signal;
+  respTrigger["defaultSignal"] = resp_has_default_trigger ? resp_default_trigger.signal : "";
+  respTrigger["operator"] = modeTriggerOperatorName(mode_trigger_config.op);
+  respTrigger["value"] = mode_trigger_config.value;
+  respTrigger["mode"] = modeName(mode_trigger_config.mode);
+  respTrigger["broadcastOpenHaldexOverCAN"] = mode_trigger_config.broadcastOpenHaldexOverCAN;
+  respTrigger["active"] = resp_mode_trigger_runtime.active;
+  respTrigger["seen"] = resp_mode_trigger_runtime.seen;
+  respTrigger["lastValue"] = resp_mode_trigger_runtime.lastValue;
+  respTrigger["ageMs"] = resp_mode_trigger_runtime.ageMs;
+  respTrigger["effectiveMode"] = modeName(openhaldexEffectiveMode());
+  respTrigger["effectiveBroadcastOpenHaldexOverCAN"] = openhaldexEffectiveBroadcastOpenHaldexOverCAN();
   sendJson(request, 200, resp);
 }
 
@@ -661,6 +1141,7 @@ static void handleCanviewCapturePost(AsyncWebServerRequest* request, const Strin
   if (want_active && !canview_capture_active) {
     canview_capture_prev_disable_controller = disableController;
     canview_capture_prev_broadcast = broadcastOpenHaldexOverCAN;
+    canview_capture_prev_mode_trigger_suppressed = modeTriggerSuppressed;
     canview_capture_prev_mode = state.mode;
     canview_capture_prev_valid = true;
     canview_capture_active = true;
@@ -672,6 +1153,8 @@ static void handleCanviewCapturePost(AsyncWebServerRequest* request, const Strin
       disableController = canview_capture_prev_disable_controller;
       state.mode = canview_capture_prev_mode;
       broadcastOpenHaldexOverCAN = canview_capture_prev_broadcast;
+      modeTriggerSuppressed = canview_capture_prev_mode_trigger_suppressed;
+      modeTriggerRuntimeReset();
       lastMode = (uint8_t)state.mode;
     }
     canview_capture_prev_valid = false;
@@ -1288,6 +1771,10 @@ void setupApi(AsyncWebServer& server) {
   ensureDefaults();
 
   server.on("/api/status", HTTP_GET, [](AsyncWebServerRequest* request) { handleStatus(request); });
+  server.on("/api/learn/status", HTTP_GET, [](AsyncWebServerRequest* request) { handleLearnStatus(request); });
+  server.on("/api/learn/start", HTTP_POST, [](AsyncWebServerRequest* request) { handleLearnStart(request); });
+  server.on("/api/learn/cancel", HTTP_POST, [](AsyncWebServerRequest* request) { handleLearnCancel(request); });
+  server.on("/api/learn/clear", HTTP_POST, [](AsyncWebServerRequest* request) { handleLearnClear(request); });
 
   server.on(
     "/api/mode", HTTP_POST, [](AsyncWebServerRequest* request) { (void)request; }, nullptr,

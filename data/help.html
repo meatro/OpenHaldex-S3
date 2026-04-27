@@ -136,44 +136,351 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
           </div>
         </div>
       </header>
-      <main class="page-main" aria-label="Help and usage guidance">
+      <main class="page-main help-main" aria-label="Help and usage guidance">
         <div class="grid-container">
           <div class="col-12 col-md-6">
-            <section class="ui-card">
-              <div class="ui-section-head"><h2>Quick Start</h2></div>
+            <section class="ui-card help-card">
+              <div class="ui-section-head"><h2>Getting Started</h2></div>
               <ol class="info-list numbered">
-                <li>Open <strong>Setup</strong> and map verified live signals.</li>
-                <li>Load or edit a map in <strong>Map</strong>, then save current map.</li>
-                <li>Enable desired control mode on <strong>Home</strong>.</li>
-                <li>Use <strong>CAN View</strong> for validation and capture.</li>
+                <li>
+                  Open <a class="help-page-link" href="./setup.html">Setup</a> and select your
+                  Haldex generation.
+                </li>
+                <li>Calibrate the learned Haldex output table while Haldex CAN data is live.</li>
+                <li>
+                  Save your settings. The Save button writes generation, mapped inputs, dashboard
+                  slots, and trigger settings.
+                </li>
+                <li>
+                  Return to <a class="help-page-link" href="./index.html">Home</a> and select a
+                  control mode. Basic setup is complete.
+                </li>
               </ol>
             </section>
           </div>
           <div class="col-12 col-md-6">
-            <section class="ui-card">
-              <div class="ui-section-head"><h2>Safety Notes</h2></div>
+            <section class="ui-card help-card">
+              <div class="ui-section-head"><h2>Requested Lock</h2></div>
+              <p class="help-lead">
+                OpenHaldex-S3 does not mechanically force the coupling by itself. It sends a
+                requested Haldex lock value based on the active mode, mapped inputs, saved curves,
+                and safety gates.
+              </p>
               <ul class="info-list">
-                <li>Validate mapped inputs at idle and low-speed before hard driving.</li>
-                <li>Do not tune while vehicle is in motion without a second operator.</li>
-                <li>Use conservative map as baseline after firmware changes.</li>
-                <li>Record a 30s CAN dump before and after major changes.</li>
+                <li><strong>0%</strong> means minimum requested lock.</li>
+                <li><strong>100%</strong> means maximum requested lock.</li>
+                <li>Values between saved points are interpolated smoothly.</li>
               </ul>
             </section>
+          </div>
+        </div>
+
+        <div class="grid-container">
+          <div class="col-12">
+            <section class="ui-card help-card">
+              <div class="ui-section-head"><h2>Mode Settings</h2></div>
+              <p class="help-lead">
+                Map, Speed, Throttle, and RPM modes share the same behavior controls. The Enable
+                toggles apply or bypass each gate while keeping the typed values saved.
+              </p>
+              <dl class="help-term-list">
+                <div class="help-term">
+                  <dt>Disengage under speed</dt>
+                  <dd>
+                    Suppresses lock request below the selected vehicle speed. Full throttle bypasses
+                    this gate for launch control.
+                  </dd>
+                </div>
+                <div class="help-term">
+                  <dt>Minimum throttle</dt>
+                  <dd>
+                    Requires pedal input to reach the selected percentage before the mode can
+                    request lock.
+                  </dd>
+                </div>
+                <div class="help-term">
+                  <dt>Disable above speed</dt>
+                  <dd>Forces the lock request off above the selected vehicle speed.</dd>
+                </div>
+                <div class="help-term">
+                  <dt>Lock release ramp</dt>
+                  <dd>
+                    Limits how quickly requested lock can fall, in percent per second. Lower values
+                    release more gently; higher values release faster.
+                  </dd>
+                </div>
+                <div class="help-term">
+                  <dt>Broadcast Haldex status</dt>
+                  <dd>
+                    Publishes Haldex status back to the chassis bus for pages and vehicle modules
+                    that use that information.
+                  </dd>
+                </div>
+                <div class="help-term">
+                  <dt>Enable controller output</dt>
+                  <dd>
+                    Allows OpenHaldex-S3 to send its control request. Turning this off leaves the
+                    controller in stock/pass-through behavior.
+                  </dd>
+                </div>
+              </dl>
+            </section>
+          </div>
+        </div>
+
+        <div class="grid-container">
+          <div class="col-12 col-md-6">
+            <details class="ui-details help-details" data-detail="help-home" open>
+              <summary>Home</summary>
+              <div class="help-section">
+                <p class="help-lead">
+                  Home is the driving screen. Use it to select the active AWD mode and watch the key
+                  status indicators.
+                </p>
+                <ul class="info-list">
+                  <li>
+                    <strong>Lock</strong> applies a fixed requested front/rear split from the ratio
+                    slider.
+                  </li>
+                  <li>
+                    <strong>Throttle</strong>, <strong>Speed</strong>, <strong>RPM</strong>, and
+                    <strong>Map</strong> use the saved curve or map for that mode.
+                  </li>
+                  <li><strong>Off</strong> returns control to stock/pass-through behavior.</li>
+                  <li>
+                    <strong>TMP</strong> shows Haldex temperature protection,
+                    <strong>CAN</strong> shows bus health, and <strong>AWD</strong> shows coupling
+                    activity/open state.
+                  </li>
+                  <li>
+                    Dashboard tiles display default telemetry or the custom signals selected on
+                    Setup.
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </div>
+          <div class="col-12 col-md-6">
+            <details class="ui-details help-details" data-detail="help-setup" open>
+              <summary>Setup</summary>
+              <div class="help-section">
+                <p class="help-lead">
+                  Setup is where the controller learns what vehicle generation and decoded CAN
+                  signals it should use.
+                </p>
+                <ul class="info-list">
+                  <li>
+                    Select the Haldex generation first, then Save. This applies the recommended
+                    defaults for Gen 1, 2, 4, or 5.
+                  </li>
+                  <li>
+                    Use Calibrate to build the learned Haldex output table after Haldex CAN data is
+                    live.
+                  </li>
+                  <li>
+                    Use the Decoded Signal Browser to assign a signal to an input, dashboard slot,
+                    or CAN mode trigger.
+                  </li>
+                  <li>
+                    Mapped inputs feed the control modes. Advanced users can assign any decoded CAN
+                    signal to the Speed or Throttle input slots and use those as map axes.
+                  </li>
+                  <li>
+                    The CAN Mode Trigger can enable one mode when one decoded signal matches the
+                    selected condition.
+                  </li>
+                  <li>
+                    Clear All returns Setup selections to defaults, clears dashboard slots, resets
+                    the trigger, and clears learned calibration.
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="grid-container">
+          <div class="col-12">
+            <details class="ui-details help-details" data-detail="help-map" open>
+              <summary>Map Mode</summary>
+              <div class="help-section">
+                <p class="help-lead">
+                  Map mode applies a requested lock value from a two-axis table. By default the axes
+                  are Speed and Throttle, but those input slots can be assigned to any decoded CAN
+                  signal in Setup.
+                </p>
+                <ul class="info-list">
+                  <li>Select a saved map from the dropdown, then click Load.</li>
+                  <li>Click table cells to fine tune requested lock values.</li>
+                  <li>
+                    Click a column header, then use Column Shaping to quickly rough in a custom map.
+                  </li>
+                  <li>Edit Speed and Throttle bins to create a fully custom axis layout.</li>
+                  <li>
+                    Use Save to write the active map to memory, or enter a name and use Save As to
+                    create a custom map.
+                  </li>
+                  <li>
+                    Use Download TXT and upload TXT to share maps or move them between controllers.
+                  </li>
+                  <li>
+                    Mode Behavior controls apply gates such as low-speed disengage, minimum
+                    throttle, high-speed disable, and lock release ramp.
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="grid-container">
+          <div class="col-12 col-md-4">
+            <details class="ui-details help-details" data-detail="help-speed" open>
+              <summary>Speed Mode</summary>
+              <div class="help-section">
+                <p class="help-lead">
+                  Speed mode applies requested lock based on vehicle speed alone.
+                </p>
+                <ul class="info-list">
+                  <li>Add, edit, or delete speed points.</li>
+                  <li>Each point contains a speed bin and requested lock percentage.</li>
+                  <li>The controller interpolates between points while driving.</li>
+                  <li>Use Load, Defaults, and Save Curve to manage the curve stored in memory.</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+          <div class="col-12 col-md-4">
+            <details class="ui-details help-details" data-detail="help-throttle" open>
+              <summary>Throttle Mode</summary>
+              <div class="help-section">
+                <p class="help-lead">
+                  Throttle mode applies requested lock based on pedal or throttle value.
+                </p>
+                <ul class="info-list">
+                  <li>
+                    Use lower values for light throttle behavior and higher values for aggressive
+                    throttle input.
+                  </li>
+                  <li>Each point contains a throttle bin and requested lock percentage.</li>
+                  <li>
+                    This mode is useful when you want AWD response tied directly to driver demand.
+                  </li>
+                  <li>Mode Settings still apply after the throttle curve is evaluated.</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+          <div class="col-12 col-md-4">
+            <details class="ui-details help-details" data-detail="help-rpm" open>
+              <summary>RPM Mode</summary>
+              <div class="help-section">
+                <p class="help-lead">RPM mode applies requested lock based on engine speed.</p>
+                <ul class="info-list">
+                  <li>Each point contains an RPM bin and requested lock percentage.</li>
+                  <li>
+                    This mode can shape AWD behavior around engine operating range instead of
+                    vehicle speed or pedal input.
+                  </li>
+                  <li>Values are interpolated between saved RPM points.</li>
+                  <li>Use Save Curve after edits so the controller keeps the new curve.</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="grid-container">
+          <div class="col-12 col-md-6">
+            <details class="ui-details help-details" data-detail="help-canview" open>
+              <summary>CAN View</summary>
+              <div class="help-section">
+                <p class="help-lead">
+                  CAN View is for finding, validating, and capturing signals. It is not intended to
+                  replace a dedicated high-speed CAN interface.
+                </p>
+                <ul class="info-list">
+                  <li>
+                    Filter decoded signals by ID or name, and choose chassis, Haldex, or all buses.
+                  </li>
+                  <li>
+                    Decoded Frames show DBC-decoded values; Raw Frames show ID, DLC, data bytes, and
+                    age.
+                  </li>
+                  <li>
+                    Use Download 30s dump when you need a short capture for debugging or sharing.
+                  </li>
+                  <li>
+                    Diagnostic Capture temporarily switches the controller into a capture-friendly
+                    state.
+                  </li>
+                  <li>Row colors indicate RX, TX, and generated frame edits.</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+          <div class="col-12 col-md-6">
+            <details class="ui-details help-details" data-detail="help-diag" open>
+              <summary>Diagnostics</summary>
+              <div class="help-section">
+                <p class="help-lead">
+                  Diagnostics exposes live controller health, CAN state, Haldex telemetry, and
+                  generated frame information.
+                </p>
+                <ul class="info-list">
+                  <li>Use it to confirm chassis and Haldex CAN are present.</li>
+                  <li>
+                    Check current mode, effective mode, Haldex generation, and frame diagnostics.
+                  </li>
+                  <li>
+                    Use frame and telemetry values to verify whether control requests match what the
+                    vehicle is reporting.
+                  </li>
+                </ul>
+              </div>
+            </details>
+          </div>
+        </div>
+
+        <div class="grid-container">
+          <div class="col-12 col-md-6">
+            <details class="ui-details help-details" data-detail="help-logs" open>
+              <summary>Logs</summary>
+              <div class="help-section">
+                <p class="help-lead">
+                  Logs are for reviewing saved controller output and enabling debug streams when
+                  troubleshooting.
+                </p>
+                <ul class="info-list">
+                  <li>Use log files when reproducing a setup, CAN, or calibration issue.</li>
+                  <li>
+                    Enable only the logging categories you need; extra logging can add overhead.
+                  </li>
+                  <li>Download or clear logs after you have captured the information you need.</li>
+                </ul>
+              </div>
+            </details>
+          </div>
+          <div class="col-12 col-md-6">
+            <details class="ui-details help-details" data-detail="help-ota" open>
+              <summary>OTA</summary>
+              <div class="help-section">
+                <p class="help-lead">OTA handles firmware uploads and Wi-Fi configuration.</p>
+                <ul class="info-list">
+                  <li>Upload a firmware .bin only when you are ready to update the controller.</li>
+                  <li>
+                    STA settings connect the controller to a phone hotspot or local Wi-Fi network.
+                  </li>
+                  <li>AP settings control the controller access point password.</li>
+                  <li>Use Update Check to see whether the controller can reach update metadata.</li>
+                </ul>
+              </div>
+            </details>
           </div>
         </div>
       </main>
       <footer class="footer">
         <div>OpenHaldex-S3 &copy; SpringfieldVW.com</div>
-        <div class="version">
-          v0.6.0
-          <span class="update-available">
-            <svg viewBox="0 0 16 16">
-              <circle cx="8" cy="8" r="7" fill="currentColor" />
-              <path d="M5 5l6 6M11 5l-6 6" fill="none" stroke="white" stroke-width="1.5" />
-            </svg>
-            new version available
-          </span>
-        </div>
       </footer>
     </div>
     <script src="./app.js"></script>

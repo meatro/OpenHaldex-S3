@@ -1,7 +1,7 @@
 #pragma once
 
-// Debug toggles (mirrors lilygo-t2can-map-dev)
-#define enableDebug 1
+// Debug toggles default off for production builds.
+#define enableDebug 0
 #define detailedDebug 0
 #define detailedDebugStack 0
 #define detailedDebugRuntimeStats 0
@@ -13,6 +13,16 @@
 // Feature toggles
 #define OH_ENABLE_EEP_TASK 1
 #define OH_EEP_START_DELAY_MS 15000
+
+// ESP32-S3 core assignment.
+// Keep CAN receive/bridge/frame generation on one core and app/network/UI helpers on the other.
+#ifndef OH_CAN_TASK_CORE
+#define OH_CAN_TASK_CORE 0
+#endif
+
+#ifndef OH_APP_TASK_CORE
+#define OH_APP_TASK_CORE 1
+#endif
 
 // Refresh rates (ms)
 #define eepRefresh 2000

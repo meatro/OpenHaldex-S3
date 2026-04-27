@@ -19,6 +19,7 @@ const rearNumber = document.querySelector('.ratio-number[data-position="rear"]')
 const ratioLabels = document.querySelectorAll(".ratio-label");
 const ratioSeparator = document.querySelector(".ratio-separator");
 const ratioLine = document.querySelector(".ratio-line");
+const SETUP_PROFILE_KEY = "ohSetupProfile";
 let lastLockRearBias = 50;
 
 function setMenuState(isOpen) {
@@ -295,6 +296,34 @@ function clampInt(value, min, max) {
   return Math.max(min, Math.min(max, Math.round(n)));
 }
 
+function prettifyDashboardLabel(value, fallback = "Signal") {
+  const text = String(value || "")
+    .replace(/_/g, " ")
+    .trim();
+  return text || fallback;
+}
+
+function dashboardLabelFromSignalId(signalId, fallback = "Signal") {
+  const parts = String(signalId || "").split("|");
+  if (parts.length >= 3) {
+    return prettifyDashboardLabel(parts[2], fallback);
+  }
+  return prettifyDashboardLabel(signalId, fallback);
+}
+
+function readLocalSetupProfile() {
+  try {
+    const raw = localStorage.getItem(SETUP_PROFILE_KEY);
+    if (!raw) {
+      return null;
+    }
+    const parsed = JSON.parse(raw);
+    return parsed && typeof parsed === "object" ? parsed : null;
+  } catch {
+    return null;
+  }
+}
+
 function initHomeTelemetry() {
   if (!ratioSlider || !frontNumber || !rearNumber || !buttons.length) {
     return;
@@ -310,11 +339,31 @@ function initHomeTelemetry() {
     }
   });
 
+  const dashboardCards = Array.from(document.querySelectorAll(".data-item")).map((node, index) => {
+    const labelNode = node.querySelector(".data-label");
+    const valueNode = node.querySelector(".data-value");
+    return {
+      index,
+      node,
+      labelNode,
+      valueNode,
+      legacyLabel: labelNode ? labelNode.textContent.trim() : "",
+      legacyValue: valueNode ? valueNode.textContent.trim() : "",
+    };
+  });
+  const statusIcons = {
+    temp: document.querySelector('[data-status-icon="temp"]'),
+    can: document.querySelector('[data-status-icon="can"]'),
+    awd: document.querySelector('[data-status-icon="awd"]'),
+  };
+
+  const statusMode = (status) => String(status?.effectiveMode || status?.mode || "").toUpperCase();
+
   const modeToButton = (status) => {
-    if (status?.disableController && buttonByMode.off) {
+    const mode = statusMode(status);
+    if (status?.disableController && mode === "STOCK" && buttonByMode.off) {
       return buttonByMode.off;
     }
-    const mode = String(status?.mode || "").toUpperCase();
     if (mode === "SPEED" && buttonByMode.speed) {
       return buttonByMode.speed;
     }
@@ -367,8 +416,148 @@ function initHomeTelemetry() {
     return null;
   };
 
+  const setStatusIconState = (icon, state, title) => {
+    if (!icon) {
+      return;
+    }
+    icon.classList.remove("is-on", "is-fault");
+    if (state === "on") {
+      icon.classList.add("is-on");
+    } else if (state === "fault") {
+      icon.classList.add("is-fault");
+    }
+    if (title) {
+      icon.title = title;
+      icon.setAttribute("aria-label", title);
+    }
+  };
+
+  const renderStatusIcons = (status) => {
+    const can = status?.can || {};
+    const telemetry = status?.telemetry || {};
+
+    const canHealthy = Boolean(can.ready && can.chassis && can.haldex && !can.busFailure);
+    const tempProtected = Boolean(telemetry.tempProtection);
+    const awdEngagement = Number(telemetry.haldexEngagement);
+    const awdEngaged = Number.isFinite(awdEngagement) && awdEngagement > 0;
+    const awdOpen = Boolean(telemetry.couplingOpen);
+
+    setStatusIconState(
+      statusIcons.temp,
+      tempProtected ? "on" : "off",
+      tempProtected ? "Temp protection active" : "Temp protection inactive"
+    );
+
+    setStatusIconState(
+      statusIcons.can,
+      canHealthy ? "on" : "fault",
+      canHealthy ? "CAN healthy" : "CAN degraded or offline"
+    );
+
+    if (awdOpen) {
+      setStatusIconState(statusIcons.awd, "fault", "AWD coupling open");
+    } else if (awdEngaged) {
+      setStatusIconState(statusIcons.awd, "on", `AWD engaged (${Math.round(awdEngagement)})`);
+    } else {
+      setStatusIconState(statusIcons.awd, "off", "AWD idle");
+    }
+  };
+
+  const deriveLegacySetting = (status) => {
+    const mode = statusMode(status);
+    const telemetry = status?.telemetry || {};
+    const fixedRear = modeToRear(mode);
+    if (Number.isFinite(fixedRear)) {
+      return `${100 - fixedRear} / ${fixedRear}`;
+    }
+
+    const rawSpec = Number(telemetry.spec);
+    const specPercent = Number.isFinite(rawSpec) ? Math.max(0, Math.min(100, rawSpec)) : 0;
+    const requestRaw = 30 + specPercent * 1.4;
+    const rear =
+      requestRaw <= 30
+        ? 0
+        : Math.max(0, Math.min(100, Math.round(((requestRaw - 30) / 140) * 100)));
+    return `${100 - rear} / ${rear}`;
+  };
+
+  const renderLegacyDashboardCard = (card, status) => {
+    if (!card.labelNode || !card.valueNode) {
+      return;
+    }
+
+    const telemetry = status?.telemetry || {};
+    const label = card.legacyLabel.trim().toLowerCase();
+    card.labelNode.textContent = card.legacyLabel;
+
+    if (label === "speed" && Number.isFinite(Number(telemetry.speed))) {
+      card.valueNode.textContent = `${Math.round(Number(telemetry.speed))} km/h`;
+      return;
+    }
+    if (label === "engine speed" && Number.isFinite(Number(telemetry.rpm))) {
+      card.valueNode.textContent = `${Math.round(Number(telemetry.rpm))} rpm`;
+      return;
+    }
+    if (label === "boost" && Number.isFinite(Number(telemetry.boost))) {
+      card.valueNode.textContent = `${Number(telemetry.boost).toFixed(1)} kPa`;
+      return;
+    }
+    if (label === "throttle" && Number.isFinite(Number(telemetry.throttle))) {
+      card.valueNode.textContent = `${Math.round(Number(telemetry.throttle))}`;
+      return;
+    }
+    if (label === "mode") {
+      card.valueNode.textContent = statusMode(status) || String(card.legacyValue).toUpperCase();
+      return;
+    }
+    if (label === "setting") {
+      card.valueNode.textContent = deriveLegacySetting(status);
+      return;
+    }
+
+    card.valueNode.textContent = card.legacyValue;
+  };
+
+  const renderHomeDashboard = (status) => {
+    const dashboardSignals = Array.isArray(status?.dashboardSignals) ? status.dashboardSignals : [];
+    const apiDashMappings =
+      status?.dashMappings && typeof status.dashMappings === "object" ? status.dashMappings : {};
+    const localProfile = readLocalSetupProfile();
+    const localDashMappings =
+      localProfile?.dashMappings && typeof localProfile.dashMappings === "object"
+        ? localProfile.dashMappings
+        : {};
+    const dashboardBySlot = new Map(
+      dashboardSignals.map((item) => [
+        String(item?.slot || ""),
+        item && typeof item === "object" ? item : {},
+      ])
+    );
+
+    dashboardCards.forEach((card, index) => {
+      if (!card.labelNode || !card.valueNode) {
+        return;
+      }
+
+      const slot = dashboardBySlot.get(`dash_${index + 1}`);
+      const slotKey = `dash_${index + 1}`;
+      const mappedSignalId = String(
+        slot?.signalId || apiDashMappings[slotKey] || localDashMappings[slotKey] || ""
+      );
+      if (slot?.mapped || mappedSignalId) {
+        card.labelNode.textContent = slot?.label
+          ? prettifyDashboardLabel(slot.label, `Dashboard ${index + 1}`)
+          : dashboardLabelFromSignalId(mappedSignalId, `Dashboard ${index + 1}`);
+        card.valueNode.textContent = String(slot?.display || "--");
+        return;
+      }
+
+      renderLegacyDashboardCard(card, status);
+    });
+  };
+
   const updateRatioMeterFromStatus = (status) => {
-    const mode = String(status?.mode || "").toUpperCase();
+    const mode = statusMode(status);
     const telemetry = status?.telemetry || {};
 
     const activeMode = document.querySelector(".btn-circle.active")?.dataset?.mode || "";
@@ -405,29 +594,6 @@ function initHomeTelemetry() {
     const front = 100 - rear;
     ratioSlider.value = String(rear);
     updateRatioProgress(rear, 100);
-
-    const values = document.querySelectorAll(".data-item");
-    values.forEach((node) => {
-      const labelNode = node.querySelector(".data-label");
-      const valueNode = node.querySelector(".data-value");
-      if (!labelNode || !valueNode) {
-        return;
-      }
-      const label = labelNode.textContent.trim().toLowerCase();
-      if (label === "setting") {
-        valueNode.textContent = `${front} / ${rear}`;
-      } else if (label === "mode") {
-        valueNode.textContent = mode;
-      } else if (label === "speed" && Number.isFinite(Number(telemetry.speed))) {
-        valueNode.textContent = `${Math.round(Number(telemetry.speed))} km/h`;
-      } else if (label === "engine speed" && Number.isFinite(Number(telemetry.rpm))) {
-        valueNode.textContent = `${Math.round(Number(telemetry.rpm))} rpm`;
-      } else if (label === "boost" && Number.isFinite(Number(telemetry.boost))) {
-        valueNode.textContent = `${Number(telemetry.boost).toFixed(1)} kPa`;
-      } else if (label === "throttle" && Number.isFinite(Number(telemetry.throttle))) {
-        valueNode.textContent = `${Math.round(Number(telemetry.throttle))}`;
-      }
-    });
   };
 
   const syncFromStatus = async () => {
@@ -439,7 +605,7 @@ function initHomeTelemetry() {
       }
 
       if (target && target.dataset.mode === "lock") {
-        const lockRear = modeToRear(status.mode);
+        const lockRear = modeToRear(statusMode(status));
         if (Number.isFinite(lockRear)) {
           lastLockRearBias = clampInt(lockRear, 0, 50);
           ratioSlider.value = String(lockRear);
@@ -449,6 +615,8 @@ function initHomeTelemetry() {
         }
       }
 
+      renderStatusIcons(status);
+      renderHomeDashboard(status);
       updateRatioMeterFromStatus(status);
     } catch {
       // Keep UI responsive even when status polling fails.
@@ -528,6 +696,16 @@ function initSetupPage() {
   const haldexGenMenu = document.getElementById("haldex-gen-menu");
   const clearMappingsButton = document.getElementById("clear-mappings");
   const saveProfileButton = document.getElementById("save-profile");
+  const modeTriggerEnabled = document.getElementById("mode-trigger-enabled");
+  const modeTriggerBroadcast = document.getElementById("mode-trigger-broadcast");
+  const modeTriggerMode = document.getElementById("mode-trigger-mode");
+  const modeTriggerOperator = document.getElementById("mode-trigger-operator");
+  const modeTriggerValue = document.getElementById("mode-trigger-value");
+  const modeTriggerSignalItem = document.getElementById("mode-trigger-signal-item");
+  const modeTriggerSignalName = document.getElementById("mode-trigger-signal-name");
+  const modeTriggerSignalValue = document.getElementById("mode-trigger-signal-value");
+  const modeTriggerAssignButton = document.getElementById("mode-trigger-assign");
+  const modeTriggerStatus = document.getElementById("mode-trigger-status");
 
   if (
     !signalPicker ||
@@ -540,7 +718,7 @@ function initSetupPage() {
     return;
   }
 
-  const LOCAL_PROFILE_KEY = "ohSetupProfile";
+  const LOCAL_PROFILE_KEY = SETUP_PROFILE_KEY;
   const requiredInputs = [
     { key: "speed", label: "Speed" },
     { key: "throttle", label: "Throttle" },
@@ -552,6 +730,18 @@ function initSetupPage() {
   }));
   const defaultMappings = Object.fromEntries(requiredInputs.map((item) => [item.key, ""]));
   const defaultDashMappings = Object.fromEntries(dashSlots.map((slot) => [slot.key, ""]));
+  const defaultModeTrigger = {
+    enabled: false,
+    signal: "",
+    operator: "gte",
+    value: 1,
+    mode: "MAP",
+    broadcastOpenHaldexOverCAN: true,
+    active: false,
+    seen: false,
+    lastValue: null,
+    ageMs: 0,
+  };
 
   let decodedSignals = [];
   let signalById = new Map();
@@ -560,7 +750,8 @@ function initSetupPage() {
   let selectedDashKey = dashSlots[0].key;
   let mappings = { ...defaultMappings };
   let dashMappings = { ...defaultDashMappings };
-  let currentHaldexGen = "2";
+  let modeTrigger = { ...defaultModeTrigger };
+  let currentHaldexGen = "";
   let pollTimer = null;
   let pollBusy = false;
   let deferredSignalPickerRender = false;
@@ -603,6 +794,57 @@ function initSetupPage() {
     return n;
   }
 
+  function displayUnit(unit = "") {
+    const raw = String(unit || "").trim();
+    if (!raw) {
+      return "";
+    }
+
+    const normalized = raw.toLowerCase();
+    const unitMap = {
+      unit_amper: "A",
+      unit_bar: "bar",
+      unit_barpersecon: "bar/s",
+      unit_centinewtometer: "cNm",
+      unit_degrecelsi: "C",
+      unit_degreofarc: "deg",
+      unit_degreofarcpersecon: "deg/s",
+      unit_forceofgravi: "g",
+      unit_gramperliter: "g/L",
+      unit_hertz: "Hz",
+      unit_hours: "h",
+      unit_kilogram: "kg",
+      unit_kilogrammetersquar: "kg m2",
+      unit_kilometer: "km",
+      unit_kilometerperhour: "km/h",
+      unit_kilonewto: "kN",
+      unit_kilowatt: "kW",
+      unit_liter: "L",
+      unit_meter: "m",
+      unit_meterpercubicsecon: "m3/s",
+      unit_meterperseconsquar: "m/s2",
+      unit_microliter: "uL",
+      unit_millibar: "mbar",
+      unit_milliliter: "mL",
+      unit_millimeter: "mm",
+      unit_millisecon: "ms",
+      unit_minut: "min",
+      unit_minutinver: "rpm",
+      unit_newtometer: "Nm",
+      unit_newtometerpersecon: "Nm/s",
+      unit_ohm: "ohm",
+      unit_percent: "%",
+      unit_percentofforceofgravi: "% g",
+      unit_percentpersecon: "%/s",
+      unit_secon: "s",
+      unit_volt: "V",
+      unit_watt: "W",
+      unit_year: "yr",
+    };
+
+    return unitMap[normalized] || raw;
+  }
+
   function formatValue(value, unit = "", signalName = "") {
     if (value === null || value === undefined || value === "") {
       return "--";
@@ -628,6 +870,12 @@ function initSetupPage() {
     return n.toFixed(2).replace(/\.?0+$/, "");
   }
 
+  function formatDisplayValue(value, unit = "", signalName = "") {
+    const formatted = formatValue(value, unit, signalName);
+    const friendlyUnit = displayUnit(unit);
+    return friendlyUnit ? `${formatted} ${friendlyUnit}` : formatted;
+  }
+
   function formatSignal(item) {
     const bus = String(item?.bus || "all").toLowerCase();
     const id = Number(item?.id);
@@ -642,6 +890,194 @@ function initSetupPage() {
     const value = item?.value;
     const key = `${bus}|${frame}|${signal}|${unit}`.toLowerCase();
     return { key, bus, frame, signal, unit, hz, value };
+  }
+
+  function buildRecommendedSignalKey(bus, id, signal, unit = "") {
+    const busToken = String(bus || "chassis")
+      .trim()
+      .toLowerCase();
+    const frameToken = `0x${Number(id || 0).toString(16)}`;
+    const signalToken = String(signal || "")
+      .replace(/_/g, " ")
+      .trim()
+      .toLowerCase();
+    const unitToken = String(unit || "")
+      .trim()
+      .toLowerCase();
+    return `${busToken}|${frameToken}|${signalToken}|${unitToken}`;
+  }
+
+  function isValidHaldexGen(gen) {
+    const value = String(gen || "");
+    return value === "1" || value === "2" || value === "4" || value === "5";
+  }
+
+  function getRecommendedMappingsForGen(gen) {
+    switch (String(gen || "")) {
+      case "1":
+      case "2":
+      case "4":
+        return {
+          speed: buildRecommendedSignalKey("chassis", 0x1a0, "BR1_Wheel_Speed_kmh", "km/h"),
+          throttle: buildRecommendedSignalKey(
+            "chassis",
+            0x280,
+            "Pedal_Value_or_Throttle_Plate",
+            "%"
+          ),
+          rpm: buildRecommendedSignalKey("chassis", 0x280, "Engine_RPM", "rpm"),
+        };
+      case "5":
+        return {
+          speed: buildRecommendedSignalKey(
+            "chassis",
+            0xfd,
+            "ESP_v_Signal",
+            "Unit_KiloMeterPerHour"
+          ),
+          throttle: buildRecommendedSignalKey(
+            "chassis",
+            0x121,
+            "MO_Fahrpedalrohwert_01",
+            "Unit_PerCent"
+          ),
+          rpm: buildRecommendedSignalKey("chassis", 0xa8, "MO_Drehzahl_01", "Unit_MinutInver"),
+        };
+      default:
+        return { ...defaultMappings };
+    }
+  }
+
+  function getRecommendedModeTriggerForGen(gen) {
+    const base = {
+      enabled: false,
+      operator: "gte",
+      value: 1,
+      mode: "MAP",
+      broadcastOpenHaldexOverCAN: true,
+    };
+    switch (String(gen || "")) {
+      case "1":
+      case "2":
+      case "4":
+        return {
+          ...base,
+          signal: buildRecommendedSignalKey("chassis", 0x1a0, "BR1_ESP_ASR_Passive", ""),
+        };
+      case "5":
+        return {
+          ...base,
+          signal: buildRecommendedSignalKey("chassis", 0xfd, "ESP_Tastung_passiv", ""),
+        };
+      default:
+        return { ...base, signal: "" };
+    }
+  }
+
+  function isRecommendedModeTriggerSignal(signalId) {
+    const value = String(signalId || "");
+    return ["2", "5"].some((gen) => value === getRecommendedModeTriggerForGen(gen).signal);
+  }
+
+  function normalizeModeName(mode) {
+    const token = String(mode || "MAP")
+      .trim()
+      .toUpperCase();
+    if (token === "EXPERT") {
+      return "MAP";
+    }
+    const allowed = [
+      "STOCK",
+      "FWD",
+      "5050",
+      "6040",
+      "7030",
+      "8020",
+      "9010",
+      "SPEED",
+      "THROTTLE",
+      "MAP",
+      "RPM",
+    ];
+    return allowed.includes(token) ? token : "MAP";
+  }
+
+  function normalizeModeTriggerOperator(value) {
+    const token = String(value || "gte")
+      .trim()
+      .toLowerCase();
+    const allowed = ["gt", "gte", "lt", "lte", "eq", "neq", "change"];
+    return allowed.includes(token) ? token : "gte";
+  }
+
+  function normalizeModeTrigger(raw = {}) {
+    const value = Number(raw.value);
+    const broadcast =
+      raw.broadcastOpenHaldexOverCAN ?? raw.broadcastEnabled ?? defaultModeTrigger.broadcastOpenHaldexOverCAN;
+    return {
+      ...defaultModeTrigger,
+      enabled: Boolean(raw.enabled),
+      signal: String(raw.signal || raw.defaultSignal || ""),
+      operator: normalizeModeTriggerOperator(raw.operator),
+      value: Number.isFinite(value) ? value : 1,
+      mode: normalizeModeName(raw.mode),
+      broadcastOpenHaldexOverCAN: broadcast !== false,
+      active: Boolean(raw.active),
+      seen: Boolean(raw.seen),
+      lastValue:
+        raw.lastValue === null || raw.lastValue === undefined ? null : Number(raw.lastValue),
+      ageMs: Number(raw.ageMs || 0),
+    };
+  }
+
+  function applyRecommendedModeTriggerForGen(gen, overwriteKnownDefault = false) {
+    const recommended = getRecommendedModeTriggerForGen(gen);
+    if (!recommended.signal) {
+      return false;
+    }
+    if (
+      modeTrigger.signal &&
+      !(overwriteKnownDefault && isRecommendedModeTriggerSignal(modeTrigger.signal))
+    ) {
+      return false;
+    }
+    const changed = modeTrigger.signal !== recommended.signal;
+    modeTrigger = {
+      ...modeTrigger,
+      signal: recommended.signal,
+      operator: modeTrigger.operator || recommended.operator,
+      value: Number.isFinite(Number(modeTrigger.value))
+        ? Number(modeTrigger.value)
+        : recommended.value,
+      mode: normalizeModeName(modeTrigger.mode || recommended.mode),
+    };
+    return changed;
+  }
+
+  function countAssignedInputs() {
+    return requiredInputs.reduce((count, input) => count + (mappings[input.key] ? 1 : 0), 0);
+  }
+
+  function mappingsMatch(targetMappings) {
+    return requiredInputs.every(
+      (input) => String(mappings[input.key] || "") === String(targetMappings[input.key] || "")
+    );
+  }
+
+  function applyRecommendedMappingsForGen(gen, overwriteExisting = false) {
+    const recommended = getRecommendedMappingsForGen(gen);
+    let changed = false;
+    requiredInputs.forEach((input) => {
+      if (!overwriteExisting && mappings[input.key]) {
+        return;
+      }
+      const nextValue = String(recommended[input.key] || "");
+      if (mappings[input.key] !== nextValue) {
+        mappings[input.key] = nextValue;
+        changed = true;
+      }
+    });
+    return changed;
   }
 
   function readProfile() {
@@ -659,9 +1095,10 @@ function initSetupPage() {
 
   function writeProfile() {
     const profile = {
-      haldexGeneration: Number(currentHaldexGen) || 2,
+      haldexGeneration: isValidHaldexGen(currentHaldexGen) ? Number(currentHaldexGen) : "",
       mappings,
       dashMappings,
+      modeTrigger,
       updatedAt: new Date().toISOString(),
     };
     try {
@@ -679,16 +1116,41 @@ function initSetupPage() {
     mappingStatus.classList.toggle("pending", Boolean(isPending));
   }
 
+  function setModeTriggerStatus(message, isPending = false) {
+    if (!modeTriggerStatus) {
+      return;
+    }
+    modeTriggerStatus.textContent = message;
+    modeTriggerStatus.classList.toggle("pending", Boolean(isPending));
+  }
+
   function getSignalById(signalId) {
     return signalById.get(String(signalId || "").toLowerCase()) || null;
+  }
+
+  function signalSummaryFromKey(signalId) {
+    const parts = String(signalId || "").split("|");
+    if (parts.length < 3 || !parts[2]) {
+      return { name: "Not Assigned", value: "--" };
+    }
+
+    const frame = String(parts[1] || "").toUpperCase();
+    const signal = String(parts[2] || "Signal")
+      .replace(/_/g, " ")
+      .trim();
+    const unit = displayUnit(parts[3] || "");
+    return {
+      name: `${frame} ${signal}`.trim(),
+      value: unit ? `-- ${unit}` : "--",
+    };
   }
 
   function signalSummary(signalId) {
     const s = getSignalById(signalId);
     if (!s) {
-      return { name: "Not Assigned", value: "--" };
+      return signalSummaryFromKey(signalId);
     }
-    const value = `${formatValue(s.value, s.unit, s.signal)}${s.unit ? ` ${s.unit}` : ""}`;
+    const value = formatDisplayValue(s.value, s.unit, s.signal);
     return {
       name: `${s.frame} ${s.signal}`.trim(),
       value,
@@ -760,7 +1222,7 @@ function initSetupPage() {
       signalPickerValue.textContent = "Select signal";
       return;
     }
-    const value = `${formatValue(selected.value, selected.unit, selected.signal)}${selected.unit ? ` ${selected.unit}` : ""}`;
+    const value = formatDisplayValue(selected.value, selected.unit, selected.signal);
     signalPickerValue.textContent = `${selected.frame} | ${selected.signal} | ${value}`;
   }
 
@@ -775,13 +1237,14 @@ function initSetupPage() {
     const items = decodedSignals
       .map((signal) => {
         const selectedClass = signal.key === selectedSignalId ? " is-selected" : "";
-        const value = `${formatValue(signal.value, signal.unit, signal.signal)}${signal.unit ? ` ${signal.unit}` : ""}`;
+        const value = formatDisplayValue(signal.value, signal.unit, signal.signal);
         const busLabel = String(signal.bus || "").toUpperCase();
+        const unitLabel = displayUnit(signal.unit);
         return `
           <button type="button" class="signal-option${selectedClass}" data-signal-id="${escapeHtml(signal.key)}" role="option" aria-selected="${signal.key === selectedSignalId}">
             <span class="signal-option-main">${escapeHtml(signal.signal)}</span>
             <span class="signal-option-value">${escapeHtml(value)}</span>
-            <span class="signal-option-meta">${escapeHtml(busLabel)} | ${escapeHtml(signal.frame)} | ${escapeHtml(`${signal.hz} Hz`)}</span>
+            <span class="signal-option-meta">${escapeHtml(busLabel)} | ${escapeHtml(signal.frame)} | ${escapeHtml(`${signal.hz} Hz`)}${unitLabel ? ` | ${escapeHtml(unitLabel)}` : ""}</span>
           </button>
         `;
       })
@@ -795,7 +1258,9 @@ function initSetupPage() {
     if (!haldexGenValue) {
       return;
     }
-    haldexGenValue.textContent = `Gen ${currentHaldexGen}`;
+    haldexGenValue.textContent = isValidHaldexGen(currentHaldexGen)
+      ? `Gen ${currentHaldexGen}`
+      : "Select generation";
   }
 
   function renderGenPickerOptions() {
@@ -803,7 +1268,9 @@ function initSetupPage() {
       return;
     }
     haldexGenMenu.querySelectorAll("[data-haldex-gen]").forEach((item) => {
-      const active = String(item.getAttribute("data-haldex-gen") || "") === currentHaldexGen;
+      const active =
+        isValidHaldexGen(currentHaldexGen) &&
+        String(item.getAttribute("data-haldex-gen") || "") === currentHaldexGen;
       item.classList.toggle("is-selected", active);
       item.setAttribute("aria-selected", String(active));
     });
@@ -852,6 +1319,34 @@ function initSetupPage() {
       .join("");
   }
 
+  function renderModeTrigger() {
+    if (!modeTriggerEnabled || !modeTriggerMode || !modeTriggerOperator || !modeTriggerValue) {
+      return;
+    }
+    modeTriggerEnabled.checked = Boolean(modeTrigger.enabled);
+    if (modeTriggerBroadcast) {
+      modeTriggerBroadcast.checked = modeTrigger.broadcastOpenHaldexOverCAN !== false;
+    }
+    modeTriggerMode.value = normalizeModeName(modeTrigger.mode);
+    modeTriggerOperator.value = normalizeModeTriggerOperator(modeTrigger.operator);
+    if (document.activeElement !== modeTriggerValue) {
+      modeTriggerValue.value = String(
+        Number.isFinite(Number(modeTrigger.value)) ? Number(modeTrigger.value) : 1
+      );
+    }
+
+    const summary = signalSummary(modeTrigger.signal);
+    if (modeTriggerSignalItem) {
+      modeTriggerSignalItem.classList.toggle("is-assigned", Boolean(modeTrigger.signal));
+    }
+    if (modeTriggerSignalName) {
+      modeTriggerSignalName.textContent = summary.name;
+    }
+    if (modeTriggerSignalValue) {
+      modeTriggerSignalValue.textContent = modeTrigger.signal ? summary.value : "--";
+    }
+  }
+
   function renderAll(options = {}) {
     const skipSignalPicker = Boolean(options.skipSignalPicker);
     if (skipSignalPicker) {
@@ -864,9 +1359,9 @@ function initSetupPage() {
     renderSignalPicker();
     renderMappedInputs();
     renderDashSignals();
-    const hasMappedInput = requiredInputs.every((input) => Boolean(mappings[input.key]));
+    renderModeTrigger();
     if (saveProfileButton) {
-      saveProfileButton.disabled = !hasMappedInput;
+      saveProfileButton.disabled = false;
     }
   }
 
@@ -899,25 +1394,95 @@ function initSetupPage() {
   }
 
   async function saveSetupToDevice() {
+    if (!isValidHaldexGen(currentHaldexGen)) {
+      setStatus("Select a Haldex generation before saving.", true);
+      return false;
+    }
+
     const payload = {
-      haldexGeneration: Number(currentHaldexGen) || 2,
+      haldexGeneration: Number(currentHaldexGen),
       inputMappings: {
         speed: mappings.speed || "",
         throttle: mappings.throttle || "",
         rpm: mappings.rpm || "",
       },
+      dashMappings: {
+        ...dashMappings,
+      },
+      modeTrigger: {
+        enabled: Boolean(modeTrigger.enabled),
+        signal: modeTrigger.signal || "",
+        operator: normalizeModeTriggerOperator(modeTrigger.operator),
+        value: Number(modeTrigger.value) || 0,
+        mode: normalizeModeName(modeTrigger.mode),
+        broadcastOpenHaldexOverCAN: modeTrigger.broadcastOpenHaldexOverCAN !== false,
+      },
     };
     try {
-      await apiJson("/api/settings", {
+      const resp = await apiJson("/api/settings", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(payload),
       });
+      const apiMappings = resp?.inputMappings;
+      if (apiMappings && typeof apiMappings === "object") {
+        mappings = {
+          ...mappings,
+          speed: String(apiMappings.speed || ""),
+          throttle: String(apiMappings.throttle || ""),
+          rpm: String(apiMappings.rpm || ""),
+        };
+        writeProfile();
+      }
+      const apiGen = String(resp?.haldexGeneration || "");
+      if (isValidHaldexGen(apiGen)) {
+        currentHaldexGen = apiGen;
+      }
+      if (resp?.modeTrigger && typeof resp.modeTrigger === "object") {
+        modeTrigger = normalizeModeTrigger(resp.modeTrigger);
+        writeProfile();
+      }
       return true;
     } catch (error) {
       setStatus(`Setup save failed: ${error.message}`, true);
       return false;
     }
+  }
+
+  async function saveDashboardMappingsToDevice() {
+    try {
+      await apiJson("/api/settings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          dashMappings: {
+            ...dashMappings,
+          },
+        }),
+      });
+      return true;
+    } catch (error) {
+      setStatus(`Dashboard save failed: ${error.message}`, true);
+      return false;
+    }
+  }
+
+  async function applyGenerationSelection(nextGen) {
+    const next = String(nextGen || "");
+    if (!isValidHaldexGen(next)) {
+      return;
+    }
+
+    applyRecommendedMappingsForGen(next, true);
+    applyRecommendedModeTriggerForGen(next, true);
+    const message = `Generation set: Gen ${next}. Recommended signals applied.`;
+
+    currentHaldexGen = next;
+    writeProfile();
+    renderGenPickerOptions();
+    renderAll();
+    setGenPickerOpen(false);
+    setStatus(message, true);
   }
 
   function assignSelectedToInput() {
@@ -932,7 +1497,45 @@ function initSetupPage() {
     renderAll();
   }
 
-  function assignSelectedToDash() {
+  function readModeTriggerControls() {
+    modeTrigger = {
+      ...modeTrigger,
+      enabled: modeTriggerEnabled
+        ? Boolean(modeTriggerEnabled.checked)
+        : Boolean(modeTrigger.enabled),
+      mode: normalizeModeName(modeTriggerMode ? modeTriggerMode.value : modeTrigger.mode),
+      operator: normalizeModeTriggerOperator(
+        modeTriggerOperator ? modeTriggerOperator.value : modeTrigger.operator
+      ),
+      value: modeTriggerValue
+        ? Number(modeTriggerValue.value || 0)
+        : Number(modeTrigger.value || 0),
+      broadcastOpenHaldexOverCAN: modeTriggerBroadcast
+        ? Boolean(modeTriggerBroadcast.checked)
+        : modeTrigger.broadcastOpenHaldexOverCAN !== false,
+    };
+    if (!Number.isFinite(modeTrigger.value)) {
+      modeTrigger.value = 1;
+    }
+    writeProfile();
+    renderModeTrigger();
+  }
+
+  function assignSelectedToModeTrigger() {
+    if (!selectedSignalId) {
+      setModeTriggerStatus("Select a signal first.", true);
+      return;
+    }
+    modeTrigger = {
+      ...modeTrigger,
+      signal: selectedSignalId,
+    };
+    writeProfile();
+    renderModeTrigger();
+    setModeTriggerStatus("Trigger signal assigned.");
+  }
+
+  async function assignSelectedToDash() {
     if (!selectedSignalId) {
       setStatus("Select a signal first.", true);
       return;
@@ -940,28 +1543,68 @@ function initSetupPage() {
     dashMappings[selectedDashKey] = selectedSignalId;
     renderDashSignals();
     writeProfile();
-    setStatus("Dashboard slot mapped.");
+    setStatus("Dashboard slot mapped. Saving...", true);
     renderAll();
+    const ok = await saveDashboardMappingsToDevice();
+    if (ok) {
+      setStatus("Dashboard slot saved to device.");
+    }
   }
 
-  function clearAllMappings() {
-    mappings = { ...defaultMappings };
+  async function clearAllMappings() {
+    if (!isValidHaldexGen(currentHaldexGen)) {
+      mappings = { ...defaultMappings };
+      dashMappings = { ...defaultDashMappings };
+      modeTrigger = { ...defaultModeTrigger };
+      writeProfile();
+      renderAll();
+      setStatus("Local setup cleared. Select a generation before saving to device.", true);
+      setModeTriggerStatus("Trigger cleared locally.", true);
+      return;
+    }
+
+    applyRecommendedMappingsForGen(currentHaldexGen, true);
     dashMappings = { ...defaultDashMappings };
+    modeTrigger = normalizeModeTrigger(getRecommendedModeTriggerForGen(currentHaldexGen));
     writeProfile();
     renderAll();
-    setStatus("Mappings cleared.");
+    setStatus("Clearing setup...", true);
+    setModeTriggerStatus("Trigger returned to default.", true);
+    try {
+      await apiJson("/api/learn/clear", { method: "POST" });
+      window.dispatchEvent(new CustomEvent("openhaldex:learn-clear"));
+    } catch (error) {
+      setStatus(`Calibration clear failed: ${error.message}`, true);
+      return;
+    }
+    const ok = await saveSetupToDevice();
+    renderAll();
+    setStatus(
+      ok ? "Defaults restored and saved." : "Defaults restored locally. Save failed on device.",
+      !ok
+    );
+    setModeTriggerStatus(
+      ok ? "Default trigger restored." : "Default trigger restored locally.",
+      !ok
+    );
   }
 
   async function saveProfile() {
-    const hasMappedInput = requiredInputs.every((input) => Boolean(mappings[input.key]));
-    if (!hasMappedInput) {
-      setStatus("Map Speed, Throttle, and Engine RPM before saving.", true);
+    if (!isValidHaldexGen(currentHaldexGen)) {
+      setStatus("Select a Haldex generation before saving.", true);
       return;
     }
+
+    applyRecommendedMappingsForGen(currentHaldexGen, false);
+    applyRecommendedModeTriggerForGen(currentHaldexGen, false);
+    readModeTriggerControls();
     writeProfile();
+    renderAll();
+    setStatus("Saving setup...", true);
     const ok = await saveSetupToDevice();
     if (ok) {
-      setStatus("Profile saved to device.");
+      setStatus("Settings saved to device.");
+      setModeTriggerStatus("Trigger settings saved.");
     }
   }
 
@@ -976,8 +1619,11 @@ function initSetupPage() {
     if (profile?.dashMappings && typeof profile.dashMappings === "object") {
       dashMappings = { ...defaultDashMappings, ...profile.dashMappings };
     }
+    if (profile?.modeTrigger && typeof profile.modeTrigger === "object") {
+      modeTrigger = normalizeModeTrigger(profile.modeTrigger);
+    }
     const storedGen = String(profile?.haldexGeneration || "");
-    if (storedGen === "1" || storedGen === "2" || storedGen === "4" || storedGen === "5") {
+    if (isValidHaldexGen(storedGen)) {
       currentHaldexGen = storedGen;
     }
 
@@ -992,12 +1638,42 @@ function initSetupPage() {
           rpm: String(apiMappings.rpm || ""),
         };
       }
+      const apiDashMappings = status?.dashMappings;
+      if (apiDashMappings && typeof apiDashMappings === "object") {
+        dashMappings = {
+          ...dashMappings,
+          ...Object.fromEntries(
+            Object.entries(apiDashMappings).map(([key, value]) => [key, String(value || "")])
+          ),
+        };
+      }
       const apiGen = String(status?.haldexGeneration || "");
-      if (apiGen === "1" || apiGen === "2" || apiGen === "4" || apiGen === "5") {
+      if (isValidHaldexGen(apiGen)) {
         currentHaldexGen = apiGen;
+      }
+      if (status?.modeTrigger && typeof status.modeTrigger === "object") {
+        modeTrigger = normalizeModeTrigger(status.modeTrigger);
       }
     } catch {
       // Leave local profile values when device status is unavailable.
+    }
+
+    if (isValidHaldexGen(currentHaldexGen) && !modeTrigger.signal) {
+      applyRecommendedModeTriggerForGen(currentHaldexGen, false);
+    }
+
+    if (isValidHaldexGen(currentHaldexGen) && countAssignedInputs() < requiredInputs.length) {
+      const changedMappings = applyRecommendedMappingsForGen(currentHaldexGen, false);
+      if (changedMappings) {
+        writeProfile();
+        const ok = await saveSetupToDevice();
+        setStatus(
+          ok
+            ? `Recommended signals loaded for Gen ${currentHaldexGen}.`
+            : `Recommended signals loaded for Gen ${currentHaldexGen}. Save failed on device.`,
+          !ok
+        );
+      }
     }
 
     renderGenPickerOptions();
@@ -1024,21 +1700,13 @@ function initSetupPage() {
   }
 
   if (haldexGenMenu) {
-    haldexGenMenu.addEventListener("click", (event) => {
+    haldexGenMenu.addEventListener("click", async (event) => {
       const button = event.target.closest("[data-haldex-gen]");
       if (!button) {
         return;
       }
       const next = String(button.getAttribute("data-haldex-gen") || "");
-      if (next !== "1" && next !== "2" && next !== "4") {
-        return;
-      }
-      currentHaldexGen = next;
-      writeProfile();
-      renderGenPickerOptions();
-      setGenPickerOpen(false);
-      saveSetupToDevice();
-      setStatus(`Generation set: Gen ${currentHaldexGen}`);
+      await applyGenerationSelection(next);
     });
   }
 
@@ -1107,6 +1775,17 @@ function initSetupPage() {
   if (addDashButton) {
     addDashButton.addEventListener("click", assignSelectedToDash);
   }
+  [modeTriggerEnabled, modeTriggerBroadcast, modeTriggerMode, modeTriggerOperator].forEach((control) => {
+    if (control) {
+      control.addEventListener("change", readModeTriggerControls);
+    }
+  });
+  if (modeTriggerValue) {
+    modeTriggerValue.addEventListener("input", readModeTriggerControls);
+  }
+  if (modeTriggerAssignButton) {
+    modeTriggerAssignButton.addEventListener("click", assignSelectedToModeTrigger);
+  }
   if (clearMappingsButton) {
     clearMappingsButton.addEventListener("click", clearAllMappings);
   }
@@ -1116,7 +1795,13 @@ function initSetupPage() {
 
   initFromStoredProfile().finally(() => {
     renderAll();
-    setStatus("Click a target row, pick a signal, then assign.", true);
+    setStatus(
+      isValidHaldexGen(currentHaldexGen)
+        ? `Generation loaded: Gen ${currentHaldexGen}. Optional signal mapping is below.`
+        : "Select generation, then save. Optional signal mapping is below.",
+      !isValidHaldexGen(currentHaldexGen)
+    );
+    setModeTriggerStatus("Default follows the ESP/traction button signal.", true);
 
     loadSignals();
     pollTimer = window.setInterval(loadSignals, 1000);
@@ -1126,6 +1811,260 @@ function initSetupPage() {
       }
     });
   });
+}
+
+function initLearnCalibration() {
+  const statusText = document.getElementById("learnStatusText");
+  if (!statusText) {
+    return;
+  }
+
+  const progressWrap = document.getElementById("learnProgressWrap");
+  const progressFill = document.getElementById("learnProgressFill");
+  const progressLabel = document.getElementById("learnProgressLabel");
+  const learnTrack = document.getElementById("learnTrack");
+  const learnCFFill = document.getElementById("learnCFFill");
+  const learnEngFill = document.getElementById("learnEngFill");
+  const learnCFValue = document.getElementById("learnCFValue");
+  const learnEngValue = document.getElementById("learnEngValue");
+  const learnTableWrap = document.getElementById("learnTableWrap");
+  const learnTableSvg = document.getElementById("learnTableSvg");
+  const learnTableStats = document.getElementById("learnTableStats");
+  const btnStart = document.getElementById("learnStart");
+  const btnCancel = document.getElementById("learnCancel");
+
+  let pollTimer = null;
+  let pollBusy = false;
+
+  const clampPct = (value) => {
+    const n = Number(value);
+    if (!Number.isFinite(n)) {
+      return 0;
+    }
+    return Math.max(0, Math.min(100, Math.round(n)));
+  };
+
+  function setStatus(message, tone = "pending") {
+    statusText.textContent = message;
+    statusText.classList.toggle("pending", tone === "pending");
+    const colors = {
+      pending: "var(--muted)",
+      ok: "var(--success)",
+      warn: "var(--warning)",
+      error: "var(--danger)",
+      active: "var(--text)",
+    };
+    statusText.style.color = colors[tone] || colors.pending;
+  }
+
+  function setProgress(progress) {
+    const pct = clampPct(progress);
+    if (progressFill) {
+      progressFill.style.width = `${pct}%`;
+    }
+    if (progressLabel) {
+      progressLabel.textContent = `${pct}%`;
+    }
+  }
+
+  function setTracking(cf, engagement) {
+    const cfPct = clampPct(cf);
+    const engPct = clampPct(engagement);
+    if (learnCFFill) {
+      learnCFFill.style.width = `${cfPct}%`;
+    }
+    if (learnEngFill) {
+      learnEngFill.style.width = `${engPct}%`;
+    }
+    if (learnCFValue) {
+      learnCFValue.textContent = `${cfPct}%`;
+    }
+    if (learnEngValue) {
+      learnEngValue.textContent = `${engPct}%`;
+    }
+  }
+
+  function renderLearnTable(table) {
+    if (!learnTableSvg) {
+      return;
+    }
+
+    const values = Array.isArray(table) ? table.slice(0, 101).map(clampPct) : [];
+    if (values.length !== 101) {
+      learnTableSvg.innerHTML = "";
+      if (learnTableStats) {
+        learnTableStats.textContent = "CF 0: --, CF 50: --, CF 100: --";
+      }
+      return;
+    }
+
+    const width = 320;
+    const height = 180;
+    const padLeft = 30;
+    const padRight = 12;
+    const padTop = 10;
+    const padBottom = 24;
+    const plotWidth = width - padLeft - padRight;
+    const plotHeight = height - padTop - padBottom;
+    const xFor = (index) => padLeft + (index / 100) * plotWidth;
+    const yFor = (value) => padTop + ((100 - clampPct(value)) / 100) * plotHeight;
+
+    const yTicks = [0, 25, 50, 75, 100];
+    const xTicks = [0, 25, 50, 75, 100];
+    const grid = [
+      ...yTicks.map(
+        (tick) =>
+          `<line class="learn-table-grid" x1="${padLeft}" y1="${yFor(tick)}" x2="${width - padRight}" y2="${yFor(
+            tick
+          )}"></line>`
+      ),
+      ...xTicks.map(
+        (tick) =>
+          `<line class="learn-table-grid" x1="${xFor(tick)}" y1="${padTop}" x2="${xFor(tick)}" y2="${height - padBottom}"></line>`
+      ),
+    ].join("");
+
+    const labels = [
+      ...yTicks.map(
+        (tick) =>
+          `<text class="learn-table-label" x="${padLeft - 6}" y="${yFor(tick) + 3}" text-anchor="end">${tick}</text>`
+      ),
+      ...xTicks.map(
+        (tick) =>
+          `<text class="learn-table-label" x="${xFor(tick)}" y="${height - 7}" text-anchor="middle">${tick}</text>`
+      ),
+    ].join("");
+
+    const refLine = `<polyline class="learn-table-ref" points="${xFor(0)},${yFor(0)} ${xFor(100)},${yFor(100)}"></polyline>`;
+    const curvePoints = values.map((value, index) => `${xFor(index)},${yFor(value)}`).join(" ");
+    const curve = `<polyline class="learn-table-line" points="${curvePoints}"></polyline>`;
+    const dots = [0, 25, 50, 75, 100]
+      .map(
+        (index) =>
+          `<circle class="learn-table-dot" cx="${xFor(index)}" cy="${yFor(values[index])}" r="3"></circle>`
+      )
+      .join("");
+    const axes = `
+      <line class="learn-table-axis" x1="${padLeft}" y1="${padTop}" x2="${padLeft}" y2="${height - padBottom}"></line>
+      <line class="learn-table-axis" x1="${padLeft}" y1="${height - padBottom}" x2="${width - padRight}" y2="${height - padBottom}"></line>
+    `;
+
+    learnTableSvg.innerHTML = `${grid}${refLine}${axes}${curve}${dots}${labels}`;
+    if (learnTableStats) {
+      learnTableStats.textContent = `CF 0: ${values[0]}%, CF 50: ${values[50]}%, CF 100: ${values[100]}%`;
+    }
+  }
+
+  function stopPolling() {
+    if (pollTimer) {
+      window.clearInterval(pollTimer);
+      pollTimer = null;
+    }
+  }
+
+  function startPolling() {
+    if (!pollTimer) {
+      pollTimer = window.setInterval(pollStatus, 250);
+    }
+  }
+
+  function renderLearnStatus(data) {
+    const active = Boolean(data?.active);
+    const progress = Number(data?.progress || 0);
+    const tableValid = Boolean(data?.tableValid);
+    const currentCF = Number(data?.currentCF || 0);
+    const currentEng = Number(data?.currentEng || 0);
+    const table = Array.isArray(data?.table) ? data.table : [];
+    const showProgress = active || tableValid || progress === 101 || progress === 102;
+    const showTrack = active;
+    const showTable = !active && tableValid && table.length === 101;
+
+    if (progressWrap) {
+      progressWrap.hidden = !showProgress;
+    }
+    if (learnTrack) {
+      learnTrack.hidden = !showTrack;
+    }
+    if (learnTableWrap) {
+      learnTableWrap.hidden = !showTable;
+    }
+    setProgress(active ? progress : tableValid || progress === 101 ? 100 : 0);
+    setTracking(active ? currentCF : 0, active ? currentEng : 0);
+    renderLearnTable(showTable ? table : []);
+
+    if (btnStart) {
+      btnStart.disabled = active;
+      btnStart.textContent = active ? "Calibrating" : "Calibrate";
+    }
+    if (btnCancel) {
+      btnCancel.hidden = !active;
+      btnCancel.disabled = !active;
+    }
+    if (active) {
+      setStatus(`Learning output curve: step ${clampPct(progress)} of 100`, "active");
+      startPolling();
+      return;
+    }
+
+    stopPolling();
+    if (progress === 102) {
+      setStatus("Calibration rejected: invalid or no Haldex response was recorded.", "warn");
+    } else if (tableValid) {
+      setStatus("Calibration table active.", "ok");
+    } else {
+      setStatus("No calibration table - static factor active.", "pending");
+    }
+  }
+
+  async function pollStatus() {
+    if (pollBusy) {
+      return;
+    }
+    pollBusy = true;
+    try {
+      const data = await apiJson("/api/learn/status");
+      renderLearnStatus(data);
+    } catch (error) {
+      stopPolling();
+      setStatus(`Calibration status unavailable: ${error.message}`, "error");
+    } finally {
+      pollBusy = false;
+    }
+  }
+
+  if (btnStart) {
+    btnStart.addEventListener("click", async () => {
+      setStatus("Starting calibration...", "active");
+      try {
+        const resp = await apiJson("/api/learn/start", { method: "POST" });
+        if (!resp?.ok) {
+          setStatus(resp?.error || "Failed to start calibration.", "error");
+          return;
+        }
+        startPolling();
+        await pollStatus();
+      } catch (error) {
+        setStatus(`Failed to start calibration: ${error.message}`, "error");
+      }
+    });
+  }
+
+  if (btnCancel) {
+    btnCancel.addEventListener("click", async () => {
+      try {
+        await apiJson("/api/learn/cancel", { method: "POST" });
+      } catch {
+        // Status poll below will show the current state.
+      }
+      stopPolling();
+      setStatus("Calibration cancelled.", "warn");
+      await pollStatus();
+    });
+  }
+
+  window.addEventListener("openhaldex:learn-clear", pollStatus);
+  pollStatus();
+  window.addEventListener("beforeunload", stopPolling);
 }
 
 function initCurvePage() {
@@ -2395,6 +3334,7 @@ if (pageName === "canview" && typeof initCanviewPage === "function") initCanview
 if (pageName === "diag" && typeof initDiagPage === "function") initDiagPage();
 if (pageName === "ota" && typeof initOtaPage === "function") initOtaPage();
 initSetupPage();
+initLearnCalibration();
 initLogsPage();
 initDetailsPersistence();
 initCollapsibleCards();

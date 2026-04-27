@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: "Release tag to sync (example: v0.5.6-alpha)"
+        description: "Release tag to sync (example: v1.0)"
         required: true
         type: string
   release:
@@ -41,28 +41,48 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mkdir -p deploy
+          mkdir -p "deploy/${RELEASE_TAG}"
           BASE_URL="https://github.com/${GITHUB_REPOSITORY}/releases/download/${RELEASE_TAG}"
           for f in bootloader.bin partitions.bin firmware.bin littlefs.bin version.json; do
             echo "Downloading $f"
             curl -fL --retry 5 --retry-delay 2 --retry-all-errors \
-              "$BASE_URL/$f" -o "deploy/$f"
+              "$BASE_URL/$f" -o "deploy/${RELEASE_TAG}/$f"
           done
 
-      - name: Copy manifest file
+      - name: Publish latest metadata
         shell: bash
         run: |
           set -euo pipefail
-          cp manifest.json deploy/manifest.json
+          cp "deploy/${RELEASE_TAG}/version.json" deploy/version.json
+          cat > deploy/manifest.json <<EOF
+          {
+            "name": "OpenHaldex S3",
+            "builds": [
+              {
+                "chipFamily": "ESP32-S3",
+                "parts": [
+                  { "path": "${RELEASE_TAG}/bootloader.bin", "offset": 0 },
+                  { "path": "${RELEASE_TAG}/partitions.bin", "offset": 32768 },
+                  { "path": "${RELEASE_TAG}/firmware.bin", "offset": 65536 },
+                  { "path": "${RELEASE_TAG}/littlefs.bin", "offset": 7929856 }
+                ]
+              }
+            ]
+          }
+          EOF
 
       - name: Verify deploy files
         shell: bash
         run: |
           set -euo pipefail
-          for f in bootloader.bin partitions.bin firmware.bin littlefs.bin version.json manifest.json; do
+          for f in version.json manifest.json; do
             test -s "deploy/$f" || { echo "Missing deploy/$f"; exit 1; }
           done
+          for f in bootloader.bin partitions.bin firmware.bin littlefs.bin version.json; do
+            test -s "deploy/${RELEASE_TAG}/$f" || { echo "Missing deploy/${RELEASE_TAG}/$f"; exit 1; }
+          done
           ls -lh deploy
+          ls -lh "deploy/${RELEASE_TAG}"
 
       - name: Upload to website
         uses: SamKirkland/FTP-Deploy-Action@v4.3.6
