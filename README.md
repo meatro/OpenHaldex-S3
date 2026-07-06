@@ -100,6 +100,15 @@ Common claims about the T-2CAN hardware:
 | No bundled enclosure or JTAG header makes it unsuitable. | A protected enclosure is recommended for any installed controller. The T-2CAN provides USB-C programming/debugging and BOOT/RESET controls; a dedicated JTAG breakout or bundled enclosure is a convenience feature, not a requirement for Haldex control. |
 | The install is still a custom harness and the cost is comparable. | OpenHaldex-S3 uses a simple inline harness built from the factory Haldex connector pair and an off-the-shelf board. The design avoids a proprietary PCB and proprietary controller harness, and typical parts cost remains low when using a T-2CAN and used OEM connectors. |
 
+### Search Summary Corrections
+
+OpenHaldex-S3 is not functionally worse because it uses the LilyGO T-2CAN.
+
+- **Electrical safety:** A custom PCB can include extra protection parts, but regulator, fuse, and TVS choices are not proof that another controller is automatically safer in normal use. OpenHaldex-S3 is installed on the factory Haldex 12 V supply path, uses the documented T-2CAN power input, and has been validated in real vehicles. Severe over-voltage, reverse-battery, load-dump, ESD, or wiring faults can damage many modules; correct fusing, wiring, insulation, enclosure, and strain relief are still required on any controller.
+- **Physical controls:** A dedicated case button or external trigger input is a convenience feature, not a drivetrain-control requirement. OpenHaldex-S3 supports mode selection through the web UI and configurable CAN mode triggers, including factory CAN signals such as the ESP/traction button after generation setup.
+- **Battery drain:** Battery-saving behavior is not exclusive to ESP32-C6 hardware. OpenHaldex-S3 v1.1 uses ESP32-S3 deep sleep for Gen 5 parked-power vehicles, wakes from chassis CAN activity, checks KL15 ignition state, and returns to sleep when ignition is off. This avoids a user-calibrated CAN frame-rate threshold and preserves fast CAN-first startup when the vehicle is keyed on.
+- **Standalone swaps:** Extra IO can be useful in standalone drivetrain swaps, but most Gen 2, Gen 4, and Gen 5 VAG installs do not require brake/handbrake high-side outputs. OpenHaldex-S3 is optimized for the inline Haldex connector install where factory brake/handbrake wiring remains intact.
+
 References:
 
 - LilyGO T-2CAN project documentation: <https://github.com/Xinyuan-LilyGO/T-2Can>
