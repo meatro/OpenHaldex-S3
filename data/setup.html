@@ -228,6 +228,27 @@ Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
 
         <div class="grid-container">
           <div class="col-12 setup-split-left">
+            <section class="setup-card low-power-card">
+              <div class="setup-section-head">
+                <h2>Power</h2>
+                <label class="ui-check">
+                  <input type="checkbox" id="low-power-sleep-enabled" />
+                  <span>Parked sleep</span>
+                </label>
+              </div>
+              <p class="setup-subtle">
+                Gen 5 only. Wakes on chassis CAN, checks ignition, and sleeps again when ignition is off.
+                Hold BOOT during reset to keep the access point awake for service.
+              </p>
+              <p id="low-power-status" class="setup-status pending">
+                Parked sleep is applied when Gen 5 is selected.
+              </p>
+            </section>
+          </div>
+        </div>
+
+        <div class="grid-container">
+          <div class="col-12 setup-split-left">
             <section class="setup-card setup-browser">
               <div class="setup-section-head">
                 <h2>Decoded Signal Browser</h2>

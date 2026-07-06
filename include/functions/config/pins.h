@@ -28,3 +28,4 @@
 #define MCP2515_MOSI 11
 #define MCP2515_MISO 13
 #define MCP2515_RST 9
+#define MCP2515_INT 8

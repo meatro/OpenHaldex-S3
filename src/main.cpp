@@ -15,6 +15,7 @@
 #include "functions/storage/filelog.h"
 #include "functions/web/web.h"
 #include "functions/net/update.h"
+#include "functions/power/power.h"
 
 static AsyncWebServer server(80);
 
@@ -254,24 +255,30 @@ void wifiApplySettings() {
 
 void setup() {
 
-  // Bring CAN online as early as possible (after transceiver enable pins).
-  canInit();
-
   Serial.begin(115200);
   LOG_INFO("system", "OpenHaldex S3 starting");
+
+  mappedInputSignalsInit();
+  modeTriggerInit();
+  dashboardSignalsInit();
+  powerInitBootState();
+  powerLoadBootSettings();
+  if (!powerBootProbeOrSleep()) {
+    return;
+  }
+
+  // Bring CAN online before filesystem, network, and web services.
+  canInit();
 
   storageInit();
   filelogInit();
   storageLoad();
-  mappedInputSignalsInit();
-  modeTriggerInit();
-  dashboardSignalsInit();
   LOG_INFO("system", "Storage loaded and logger active");
 
-  // Keep CAN init first, but bring up AP/control plane before high-rate CAN tasks.
-  wifiStart();
-
   tasksInit();
+  powerStartMonitor();
+
+  wifiStart();
 
   updateInit();
   xTaskCreatePinnedToCore(wifiStaMaintainTask, "wifiStaMaintain", 4096, nullptr, 1, nullptr, OH_APP_TASK_CORE);

@@ -706,6 +706,8 @@ function initSetupPage() {
   const modeTriggerSignalValue = document.getElementById("mode-trigger-signal-value");
   const modeTriggerAssignButton = document.getElementById("mode-trigger-assign");
   const modeTriggerStatus = document.getElementById("mode-trigger-status");
+  const lowPowerSleepEnabled = document.getElementById("low-power-sleep-enabled");
+  const lowPowerStatus = document.getElementById("low-power-status");
 
   if (
     !signalPicker ||
@@ -742,6 +744,9 @@ function initSetupPage() {
     lastValue: null,
     ageMs: 0,
   };
+  const defaultLowPower = {
+    sleepEnabled: false,
+  };
 
   let decodedSignals = [];
   let signalById = new Map();
@@ -751,6 +756,7 @@ function initSetupPage() {
   let mappings = { ...defaultMappings };
   let dashMappings = { ...defaultDashMappings };
   let modeTrigger = { ...defaultModeTrigger };
+  let lowPower = { ...defaultLowPower };
   let currentHaldexGen = "";
   let pollTimer = null;
   let pollBusy = false;
@@ -1030,6 +1036,13 @@ function initSetupPage() {
     };
   }
 
+  function normalizeLowPower(raw = {}) {
+    return {
+      ...defaultLowPower,
+      sleepEnabled: Boolean(raw.sleepEnabled ?? raw.lowPowerSleepEnabled),
+    };
+  }
+
   function applyRecommendedModeTriggerForGen(gen, overwriteKnownDefault = false) {
     const recommended = getRecommendedModeTriggerForGen(gen);
     if (!recommended.signal) {
@@ -1099,6 +1112,7 @@ function initSetupPage() {
       mappings,
       dashMappings,
       modeTrigger,
+      lowPower,
       updatedAt: new Date().toISOString(),
     };
     try {
@@ -1122,6 +1136,14 @@ function initSetupPage() {
     }
     modeTriggerStatus.textContent = message;
     modeTriggerStatus.classList.toggle("pending", Boolean(isPending));
+  }
+
+  function setLowPowerStatus(message, isPending = false) {
+    if (!lowPowerStatus) {
+      return;
+    }
+    lowPowerStatus.textContent = message;
+    lowPowerStatus.classList.toggle("pending", Boolean(isPending));
   }
 
   function getSignalById(signalId) {
@@ -1347,6 +1369,21 @@ function initSetupPage() {
     }
   }
 
+  function renderLowPower() {
+    if (!lowPowerSleepEnabled) {
+      return;
+    }
+    lowPowerSleepEnabled.checked = Boolean(lowPower.sleepEnabled);
+    const gen5 = String(currentHaldexGen || "") === "5";
+    if (gen5 && lowPower.sleepEnabled) {
+      setLowPowerStatus("Parked sleep will arm after saving Gen 5 setup.");
+    } else if (gen5) {
+      setLowPowerStatus("Parked sleep is off for this Gen 5 setup.", true);
+    } else {
+      setLowPowerStatus("Parked sleep only arms on Gen 5.", true);
+    }
+  }
+
   function renderAll(options = {}) {
     const skipSignalPicker = Boolean(options.skipSignalPicker);
     if (skipSignalPicker) {
@@ -1360,6 +1397,7 @@ function initSetupPage() {
     renderMappedInputs();
     renderDashSignals();
     renderModeTrigger();
+    renderLowPower();
     if (saveProfileButton) {
       saveProfileButton.disabled = false;
     }
@@ -1417,6 +1455,9 @@ function initSetupPage() {
         mode: normalizeModeName(modeTrigger.mode),
         broadcastOpenHaldexOverCAN: modeTrigger.broadcastOpenHaldexOverCAN !== false,
       },
+      lowPower: {
+        sleepEnabled: Boolean(lowPower.sleepEnabled),
+      },
     };
     try {
       const resp = await apiJson("/api/settings", {
@@ -1440,6 +1481,10 @@ function initSetupPage() {
       }
       if (resp?.modeTrigger && typeof resp.modeTrigger === "object") {
         modeTrigger = normalizeModeTrigger(resp.modeTrigger);
+        writeProfile();
+      }
+      if (resp?.lowPower && typeof resp.lowPower === "object") {
+        lowPower = normalizeLowPower(resp.lowPower);
         writeProfile();
       }
       return true;
@@ -1475,6 +1520,10 @@ function initSetupPage() {
 
     applyRecommendedMappingsForGen(next, true);
     applyRecommendedModeTriggerForGen(next, true);
+    lowPower = {
+      ...lowPower,
+      sleepEnabled: next === "5",
+    };
     const message = `Generation set: Gen ${next}. Recommended signals applied.`;
 
     currentHaldexGen = next;
@@ -1521,6 +1570,17 @@ function initSetupPage() {
     renderModeTrigger();
   }
 
+  function readLowPowerControls() {
+    lowPower = {
+      ...lowPower,
+      sleepEnabled: lowPowerSleepEnabled
+        ? Boolean(lowPowerSleepEnabled.checked)
+        : Boolean(lowPower.sleepEnabled),
+    };
+    writeProfile();
+    renderLowPower();
+  }
+
   function assignSelectedToModeTrigger() {
     if (!selectedSignalId) {
       setModeTriggerStatus("Select a signal first.", true);
@@ -1556,6 +1616,7 @@ function initSetupPage() {
       mappings = { ...defaultMappings };
       dashMappings = { ...defaultDashMappings };
       modeTrigger = { ...defaultModeTrigger };
+      lowPower = { ...defaultLowPower };
       writeProfile();
       renderAll();
       setStatus("Local setup cleared. Select a generation before saving to device.", true);
@@ -1566,6 +1627,10 @@ function initSetupPage() {
     applyRecommendedMappingsForGen(currentHaldexGen, true);
     dashMappings = { ...defaultDashMappings };
     modeTrigger = normalizeModeTrigger(getRecommendedModeTriggerForGen(currentHaldexGen));
+    lowPower = {
+      ...lowPower,
+      sleepEnabled: currentHaldexGen === "5",
+    };
     writeProfile();
     renderAll();
     setStatus("Clearing setup...", true);
@@ -1598,6 +1663,7 @@ function initSetupPage() {
     applyRecommendedMappingsForGen(currentHaldexGen, false);
     applyRecommendedModeTriggerForGen(currentHaldexGen, false);
     readModeTriggerControls();
+    readLowPowerControls();
     writeProfile();
     renderAll();
     setStatus("Saving setup...", true);
@@ -1621,6 +1687,9 @@ function initSetupPage() {
     }
     if (profile?.modeTrigger && typeof profile.modeTrigger === "object") {
       modeTrigger = normalizeModeTrigger(profile.modeTrigger);
+    }
+    if (profile?.lowPower && typeof profile.lowPower === "object") {
+      lowPower = normalizeLowPower(profile.lowPower);
     }
     const storedGen = String(profile?.haldexGeneration || "");
     if (isValidHaldexGen(storedGen)) {
@@ -1653,6 +1722,13 @@ function initSetupPage() {
       }
       if (status?.modeTrigger && typeof status.modeTrigger === "object") {
         modeTrigger = normalizeModeTrigger(status.modeTrigger);
+      }
+      if (status?.power && typeof status.power === "object") {
+        lowPower = normalizeLowPower({
+          sleepEnabled: status.power.lowPowerSleepEnabled,
+        });
+      } else if (status?.lowPower && typeof status.lowPower === "object") {
+        lowPower = normalizeLowPower(status.lowPower);
       }
     } catch {
       // Leave local profile values when device status is unavailable.
@@ -1782,6 +1858,9 @@ function initSetupPage() {
   });
   if (modeTriggerValue) {
     modeTriggerValue.addEventListener("input", readModeTriggerControls);
+  }
+  if (lowPowerSleepEnabled) {
+    lowPowerSleepEnabled.addEventListener("change", readLowPowerControls);
   }
   if (modeTriggerAssignButton) {
     modeTriggerAssignButton.addEventListener("click", assignSelectedToModeTrigger);
@@ -4521,6 +4600,17 @@ function initDiagPage() {
         : '<span class="pill good">OK</span>';
       el("lastChassis").textContent = fmtMs(can.lastChassisMs);
       el("lastHaldex").textContent = fmtMs(can.lastHaldexMs);
+
+      const power = data.power || {};
+      el("powerSleepEnabled").innerHTML = pill(power.lowPowerSleepEnabled);
+      el("powerActive").innerHTML = pill(power.active);
+      el("powerIgnition").textContent = power.ignitionSeen
+        ? `${power.ignitionOn ? "On" : "Off"}${power.ignitionSource ? ` (${power.ignitionSource})` : ""}`
+        : "Not seen";
+      el("powerOverride").innerHTML = pill(power.maintenanceOverride);
+      el("powerWake").textContent = power.wakeCause || "-";
+      el("powerLastChassis").textContent = fmtMs(power.lastChassisAgeMs);
+      el("powerSleepDelay").textContent = fmtMs(power.sleepDelayMs);
 
       el("tempProtection").innerHTML = pill(tel.tempProtection);
       el("couplingOpen").innerHTML = pill(tel.couplingOpen);

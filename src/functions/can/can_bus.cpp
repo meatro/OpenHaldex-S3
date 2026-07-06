@@ -26,14 +26,13 @@ static bool can_rate_limited(uint32_t& last_log_ms, uint32_t interval_ms = 1000)
   return false;
 }
 
-static bool can_init_bus(int bus_id, int tx_pin, int rx_pin, twai_handle_t* out_handle) {
+static bool can_init_bus(int bus_id, int tx_pin, int rx_pin, twai_handle_t* out_handle, twai_mode_t mode) {
   if (tx_pin < 0 || rx_pin < 0) {
     LOG_ERROR("can", "bus init failed: invalid pins bus=%d tx=%d rx=%d", bus_id, tx_pin, rx_pin);
     return false;
   }
 
-  twai_general_config_t g_config =
-    TWAI_GENERAL_CONFIG_DEFAULT(gpio_num_t(tx_pin), gpio_num_t(rx_pin), TWAI_MODE_NO_ACK);
+  twai_general_config_t g_config = TWAI_GENERAL_CONFIG_DEFAULT(gpio_num_t(tx_pin), gpio_num_t(rx_pin), mode);
   twai_timing_config_t t_config = TWAI_TIMING_CONFIG_500KBITS();
   twai_filter_config_t f_config = TWAI_FILTER_CONFIG_ACCEPT_ALL();
 
@@ -54,6 +53,15 @@ static bool can_init_bus(int bus_id, int tx_pin, int rx_pin, twai_handle_t* out_
     return false;
   }
   return true;
+}
+
+static void can_deinit_twai_bus(twai_handle_t& handle) {
+  if (!handle) {
+    return;
+  }
+  (void)twai_stop_v2(handle);
+  (void)twai_driver_uninstall_v2(handle);
+  handle = nullptr;
 }
 
 bool chassis_can_send(const twai_message_t& msg, TickType_t timeout_ticks) {
@@ -142,21 +150,15 @@ bool haldex_can_receive(twai_message_t& msg) {
 #endif
 }
 
-void canInit() {
-  // Bus mapping for T-2CAN:
-  // - chassis (logical bus 0): internal ESP32-S3 TWAI on CAN1 pins
-  // - haldex  (logical bus 1): MCP2515 SPI controller
-  can_ready = false;
+bool canInitChassisOnly(twai_mode_t mode) {
+  can_deinit_twai_bus(can_bus_0());
   can0_ready = false;
-  can1_ready = false;
+  can_ready = false;
+  can0_ready = can_init_bus(0, CAN1_TX, CAN1_RX, &can_bus_0(), mode);
+  return can0_ready;
+}
 
-  // Chassis bus (logical bus 0) on internal TWAI.
-  can0_ready = can_init_bus(0, CAN1_TX, CAN1_RX, &can_bus_0());
-  if (!can0_ready) {
-    DEBUG("CAN chassis (TWAI) init failed");
-    return;
-  }
-
+static bool can_init_haldex_bus() {
 #if OH_CAN_HALDEX_MCP2515
   // Haldex bus (logical bus 1) on MCP2515.
   pinMode(MCP2515_RST, OUTPUT);
@@ -171,26 +173,72 @@ void canInit() {
 
   if (can_mcp.reset() != MCP2515::ERROR_OK) {
     DEBUG("CAN haldex (MCP2515) reset failed");
-    return;
+    return false;
   }
   if (can_mcp.setBitrate(CAN_500KBPS) != MCP2515::ERROR_OK) {
     DEBUG("CAN haldex (MCP2515) bitrate set failed");
-    return;
+    return false;
   }
   if (can_mcp.setNormalMode() != MCP2515::ERROR_OK) {
     DEBUG("CAN haldex (MCP2515) normal mode failed");
-    return;
+    return false;
   }
   DEBUG("CAN haldex (MCP2515) started");
-  can1_ready = true;
+  return true;
 #else
   // Optional dual-TWAI fallback (non T-2CAN targets).
-  can1_ready = can_init_bus(1, CAN0_TX, CAN0_RX, &can_bus_1());
+  return can_init_bus(1, CAN0_TX, CAN0_RX, &can_bus_1(), TWAI_MODE_NO_ACK);
+#endif
+}
+
+void haldexCanSleep() {
+#if OH_CAN_HALDEX_MCP2515
+  if (can1_ready) {
+    (void)can_mcp.setSleepMode();
+  }
+  can1_ready = false;
+#else
+  can_deinit_twai_bus(can_bus_1());
+  can1_ready = false;
+#endif
+}
+
+void canDeinit() {
+  const bool had_haldex_bus = can1_ready;
+  can_ready = false;
+  can_deinit_twai_bus(can_bus_0());
+  can0_ready = false;
+#if OH_CAN_HALDEX_MCP2515
+  if (had_haldex_bus) {
+    (void)can_mcp.setSleepMode();
+  }
+#else
+  can_deinit_twai_bus(can_bus_1());
+#endif
+  can1_ready = false;
+}
+
+void canInit() {
+  // Bus mapping for T-2CAN:
+  // - chassis (logical bus 0): internal ESP32-S3 TWAI on CAN1 pins
+  // - haldex  (logical bus 1): MCP2515 SPI controller
+  canDeinit();
+  can_ready = false;
+  can0_ready = false;
+  can1_ready = false;
+
+  // Chassis bus (logical bus 0) on internal TWAI.
+  can0_ready = canInitChassisOnly(TWAI_MODE_NO_ACK);
+  if (!can0_ready) {
+    DEBUG("CAN chassis (TWAI) init failed");
+    return;
+  }
+
+  can1_ready = can_init_haldex_bus();
   if (!can1_ready) {
     DEBUG("CAN haldex (TWAI bus 1) init failed");
     return;
   }
-#endif
 
   can_ready = can0_ready && can1_ready;
 

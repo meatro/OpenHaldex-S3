@@ -56,6 +56,10 @@ bool received_report_clutch2 = false;
 bool received_temp_protection = false;
 bool received_coupling_open = false;
 bool received_speed_limit = false;
+bool lowPowerSleepEnabled = false;
+uint32_t lowPowerSleepDelayMs = 30000;
+uint32_t lowPowerWakeTimerSeconds = 300;
+uint32_t lowPowerProbeDurationMs = 1200;
 
 static SemaphoreHandle_t mapped_input_mutex = nullptr;
 static String mapped_input_speed_signal = "";

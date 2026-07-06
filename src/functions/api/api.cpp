@@ -14,6 +14,7 @@
 #include "functions/can/can_id.h"
 #include "functions/net/update.h"
 #include "functions/tasks/tasks.h"
+#include "functions/power/power.h"
 
 extern bool wifiInternetOk();
 extern void wifiApplySettings();
@@ -404,6 +405,9 @@ static void handleStatus(AsyncWebServerRequest* request) {
   can["lastChassisMs"] = lastCANChassisTick > 0 ? (millis() - lastCANChassisTick) : 0;
   can["lastHaldexMs"] = lastCANHaldexTick > 0 ? (millis() - lastCANHaldexTick) : 0;
 
+  JsonObject power = doc["power"].to<JsonObject>();
+  powerWriteStatusJson(power);
+
   JsonObject telemetry = doc["telemetry"].to<JsonObject>();
   telemetry["speed"] = received_vehicle_speed;
   telemetry["rpm"] = received_vehicle_rpm;
@@ -674,6 +678,14 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
   bool next_broadcast = broadcastOpenHaldexOverCAN;
   bool haldex_generation_set = false;
   uint8_t next_haldex_generation = haldexGeneration;
+  bool low_power_sleep_set = false;
+  bool next_low_power_sleep = lowPowerSleepEnabled;
+  bool low_power_delay_set = false;
+  uint32_t next_low_power_delay = lowPowerSleepDelayMs;
+  bool low_power_wake_timer_set = false;
+  uint32_t next_low_power_wake_timer = lowPowerWakeTimerSeconds;
+  bool low_power_probe_set = false;
+  uint32_t next_low_power_probe = lowPowerProbeDurationMs;
   bool disable_throttle_set = false;
   uint8_t next_disable_throttle = disableThrottle;
   bool disable_speed_set = false;
@@ -743,6 +755,50 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
       haldex_generation_set = true;
       next_haldex_generation = (uint8_t)g;
     }
+  }
+
+  if (doc.containsKey("lowPower")) {
+    JsonObject lowPower = doc["lowPower"].as<JsonObject>();
+    if (lowPower.isNull()) {
+      sendError(request, 400, "invalid lowPower");
+      return;
+    }
+    if (lowPower.containsKey("sleepEnabled")) {
+      low_power_sleep_set = true;
+      next_low_power_sleep = (bool)lowPower["sleepEnabled"];
+    }
+    if (lowPower.containsKey("sleepDelayMs")) {
+      int v = lowPower["sleepDelayMs"] | (int)lowPowerSleepDelayMs;
+      if (v < 5000)
+        v = 5000;
+      if (v > 600000)
+        v = 600000;
+      low_power_delay_set = true;
+      next_low_power_delay = (uint32_t)v;
+    }
+    if (lowPower.containsKey("wakeTimerSeconds")) {
+      int v = lowPower["wakeTimerSeconds"] | (int)lowPowerWakeTimerSeconds;
+      if (v < 30)
+        v = 30;
+      if (v > 86400)
+        v = 86400;
+      low_power_wake_timer_set = true;
+      next_low_power_wake_timer = (uint32_t)v;
+    }
+    if (lowPower.containsKey("probeDurationMs")) {
+      int v = lowPower["probeDurationMs"] | (int)lowPowerProbeDurationMs;
+      if (v < 100)
+        v = 100;
+      if (v > 5000)
+        v = 5000;
+      low_power_probe_set = true;
+      next_low_power_probe = (uint32_t)v;
+    }
+  }
+
+  if (doc.containsKey("lowPowerSleepEnabled")) {
+    low_power_sleep_set = true;
+    next_low_power_sleep = (bool)doc["lowPowerSleepEnabled"];
   }
 
   if (doc.containsKey("disableThrottle")) {
@@ -927,6 +983,10 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
   }
 
   const uint8_t effective_haldex_generation = haldex_generation_set ? next_haldex_generation : haldexGeneration;
+  if (haldex_generation_set && !low_power_sleep_set) {
+    low_power_sleep_set = true;
+    next_low_power_sleep = (effective_haldex_generation == 5);
+  }
   if ((mappings_changed || haldex_generation_set) &&
       seedMissingInputMappingsForGeneration(effective_haldex_generation, mapped_speed, mapped_throttle, mapped_rpm)) {
     mappings_changed = true;
@@ -981,6 +1041,22 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
   }
   if (haldex_generation_set) {
     haldexGeneration = next_haldex_generation;
+    dirty = true;
+  }
+  if (low_power_sleep_set) {
+    lowPowerSleepEnabled = next_low_power_sleep;
+    dirty = true;
+  }
+  if (low_power_delay_set) {
+    lowPowerSleepDelayMs = next_low_power_delay;
+    dirty = true;
+  }
+  if (low_power_wake_timer_set) {
+    lowPowerWakeTimerSeconds = next_low_power_wake_timer;
+    dirty = true;
+  }
+  if (low_power_probe_set) {
+    lowPowerProbeDurationMs = next_low_power_probe;
     dirty = true;
   }
   if (disable_throttle_set) {
@@ -1081,6 +1157,8 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
     msg += logDebugNetworkEnabled ? "1" : "0";
     msg += " dbgCan=";
     msg += logDebugCanEnabled ? "1" : "0";
+    msg += " lpSleep=";
+    msg += lowPowerSleepEnabled ? "1" : "0";
     filelogLogEvent("settings", msg);
   }
 
@@ -1091,6 +1169,11 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
   resp["broadcastOpenHaldexOverCAN"] = broadcastOpenHaldexOverCAN;
   resp["effectiveBroadcastOpenHaldexOverCAN"] = openhaldexEffectiveBroadcastOpenHaldexOverCAN();
   resp["haldexGeneration"] = haldexGeneration;
+  JsonObject respPower = resp["lowPower"].to<JsonObject>();
+  respPower["sleepEnabled"] = lowPowerSleepEnabled;
+  respPower["sleepDelayMs"] = lowPowerSleepDelayMs;
+  respPower["wakeTimerSeconds"] = lowPowerWakeTimerSeconds;
+  respPower["probeDurationMs"] = lowPowerProbeDurationMs;
   JsonObject respMappings = resp["inputMappings"].to<JsonObject>();
   respMappings["speed"] = mapped_speed;
   respMappings["throttle"] = mapped_throttle;

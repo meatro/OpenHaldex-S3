@@ -1,6 +1,6 @@
 {
-  "version": "v1.0",
-  "notes": "OpenHaldex-S3 v1.0 production release",
+  "version": "v1.1",
+  "notes": "OpenHaldex-S3 v1.1 adds Gen 5 parked sleep power saving",
   "firmware": "firmware.bin",
   "filesystem": "littlefs.bin"
 }

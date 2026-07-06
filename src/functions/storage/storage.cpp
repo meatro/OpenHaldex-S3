@@ -28,6 +28,10 @@ static const char* LOG_SERIAL_ENABLE_KEY = "logSerial";
 static const char* LOG_DEBUG_FIRMWARE_ENABLE_KEY = "logDbgFw";
 static const char* LOG_DEBUG_NETWORK_ENABLE_KEY = "logDbgNet";
 static const char* LOG_DEBUG_CAN_ENABLE_KEY = "logDbgCan";
+static const char* LOW_POWER_SLEEP_ENABLED_KEY = "lpSleepOn";
+static const char* LOW_POWER_SLEEP_DELAY_KEY = "lpDelayMs";
+static const char* LOW_POWER_WAKE_TIMER_KEY = "lpWakeSec";
+static const char* LOW_POWER_PROBE_DURATION_KEY = "lpProbeMs";
 static const char* SPEED_CURVE_COUNT_KEY = "spCurveCnt";
 static const char* THROTTLE_CURVE_COUNT_KEY = "thCurveCnt";
 static const char* RPM_CURVE_COUNT_KEY = "rpmCurveCnt";
@@ -123,6 +127,16 @@ static int parse_token_int(String token) {
     token = token.substring(0, token.length() - 1);
   }
   return token.toInt();
+}
+
+static uint32_t clamp_u32(uint32_t value, uint32_t min_value, uint32_t max_value) {
+  if (value < min_value) {
+    return min_value;
+  }
+  if (value > max_value) {
+    return max_value;
+  }
+  return value;
 }
 
 static int split_tabs(const String& line, String parts[], int max_parts) {
@@ -410,6 +424,10 @@ void storageLoad() {
     pref.putBool(LOG_DEBUG_FIRMWARE_ENABLE_KEY, logDebugFirmwareEnabled);
     pref.putBool(LOG_DEBUG_NETWORK_ENABLE_KEY, logDebugNetworkEnabled);
     pref.putBool(LOG_DEBUG_CAN_ENABLE_KEY, logDebugCanEnabled);
+    pref.putBool(LOW_POWER_SLEEP_ENABLED_KEY, lowPowerSleepEnabled);
+    pref.putUInt(LOW_POWER_SLEEP_DELAY_KEY, lowPowerSleepDelayMs);
+    pref.putUInt(LOW_POWER_WAKE_TIMER_KEY, lowPowerWakeTimerSeconds);
+    pref.putUInt(LOW_POWER_PROBE_DURATION_KEY, lowPowerProbeDurationMs);
 
     pref.putUChar(SPEED_CURVE_COUNT_KEY, speed_curve_count);
     pref.putBytes("spCurveBins", (byte*)(&speed_curve_bins), sizeof(speed_curve_bins));
@@ -490,6 +508,14 @@ void storageLoad() {
     logDebugFirmwareEnabled = pref.getBool(LOG_DEBUG_FIRMWARE_ENABLE_KEY, logDebugFirmwareEnabled);
     logDebugNetworkEnabled = pref.getBool(LOG_DEBUG_NETWORK_ENABLE_KEY, logDebugNetworkEnabled);
     logDebugCanEnabled = pref.getBool(LOG_DEBUG_CAN_ENABLE_KEY, logDebugCanEnabled);
+    lowPowerSleepEnabled = pref.isKey(LOW_POWER_SLEEP_ENABLED_KEY)
+                             ? pref.getBool(LOW_POWER_SLEEP_ENABLED_KEY, lowPowerSleepEnabled)
+                             : (haldexGeneration == 5);
+    lowPowerSleepDelayMs = clamp_u32(pref.getUInt(LOW_POWER_SLEEP_DELAY_KEY, lowPowerSleepDelayMs), 5000, 600000);
+    lowPowerWakeTimerSeconds =
+      clamp_u32(pref.getUInt(LOW_POWER_WAKE_TIMER_KEY, lowPowerWakeTimerSeconds), 30, 86400);
+    lowPowerProbeDurationMs =
+      clamp_u32(pref.getUInt(LOW_POWER_PROBE_DURATION_KEY, lowPowerProbeDurationMs), 100, 5000);
     const bool debug_profile_enabled = logDebugFirmwareEnabled || logDebugNetworkEnabled || logDebugCanEnabled;
     if ((debug_profile_enabled || logCanToFileEnabled) && !logToFileEnabled) {
       logToFileEnabled = true;
@@ -623,6 +649,10 @@ void storageSave() {
   pref.putBool(LOG_DEBUG_FIRMWARE_ENABLE_KEY, logDebugFirmwareEnabled);
   pref.putBool(LOG_DEBUG_NETWORK_ENABLE_KEY, logDebugNetworkEnabled);
   pref.putBool(LOG_DEBUG_CAN_ENABLE_KEY, logDebugCanEnabled);
+  pref.putBool(LOW_POWER_SLEEP_ENABLED_KEY, lowPowerSleepEnabled);
+  pref.putUInt(LOW_POWER_SLEEP_DELAY_KEY, lowPowerSleepDelayMs);
+  pref.putUInt(LOW_POWER_WAKE_TIMER_KEY, lowPowerWakeTimerSeconds);
+  pref.putUInt(LOW_POWER_PROBE_DURATION_KEY, lowPowerProbeDurationMs);
 
   pref.putUChar(SPEED_CURVE_COUNT_KEY, speed_curve_count);
   pref.putBytes("spCurveBins", (byte*)(&speed_curve_bins), sizeof(speed_curve_bins));

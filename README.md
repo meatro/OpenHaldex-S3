@@ -10,11 +10,24 @@ It is designed around inexpensive off-the-shelf hardware, inline installation at
 
 The project supports Haldex generations **1, 2, 4, and 5**. VAG did not use Gen 3 Haldex in this application.
 
-## Status
+Designed to be easy to build, configure, and use, OpenHaldex-S3 requires no soldering or advanced electrical experience.
 
-This repository is prepared for the v1.0 release. The current release metadata is kept in `version.json` and injected into the firmware build by `scripts/version.py`.
+Current release: **v1.1**. This release includes Gen 5 / MQB support and parked sleep power saving for vehicles that keep the controller powered from battery after ignition-off.
 
-The controller logic has been road-tested heavily on Gen 2 and now includes Gen 5 / MQB support. As with any drivetrain controller, verify all settings on your own vehicle before aggressive driving.
+## Public history
+
+OpenHaldex-S3 is the public, verifiable open source for many advanced OpenHaldex feature families later seen in commercial OpenHaldex products, including map control, CAN View, SavvyCAN-oriented tooling, the HTML/JS web interface, PlatformIO project structure, API control, Wi-Fi AP mode, and `openhaldex.local` navigation.
+
+These links show OpenHaldex-S3 source being imported into the Forbes Automotive OpenHaldex-C6 repository two days after the S3 snapshot:
+
+- 2026-02-06: OpenHaldex-S3 public source snapshot:
+  https://github.com/meatro/OpenHaldex-S3/commit/a8cadb7266fecd6b7860d3fb774f48dd41994def
+- 2026-02-08: Forbes Automotive commit titled `S3 port onto C6`:
+  https://github.com/Forbes-Automotive/OpenHaldex-C6/compare/44b90f10902a2aceccbe0facd335db46700942ee...a4dc321cd999474471289aa5769c75a0986b9455
+
+That import included OpenHaldex-S3 firmware source, web UI files, maps, CAN View code, PlatformIO configuration, and release metadata.
+
+**OpenHaldex-S3 is developed and vehicle-tested by a VW/Audi-certified electrical and diagnostic specialist using OEM diagnostic procedures, ODIS, measured values, CAN logging, and real vehicle validation.**
 
 ## What It Does
 
@@ -39,6 +52,7 @@ Main features:
   - Haldex status broadcast
 - Learned Haldex output calibration table
 - Configurable CAN mode trigger, defaulting to the factory ESP/traction button signal after generation selection
+- Gen 5 parked sleep mode to reduce battery draw on vehicles with constant controller power
 - CAN View with decoded/raw frames, filtering, bus selection, row origin markers, 30 second dump, and diagnostic capture mode
 - Diagnostics, logs, Wi-Fi settings, and OTA updates from the built-in web UI
 
@@ -66,6 +80,31 @@ Required:
 Typical hardware cost is under $50 if using the LilyGo board and used OEM connectors.
 
 The intended installation does not require soldering, splicing factory vehicle wiring, or a proprietary controller harness.
+
+## LilyGO T-2CAN Hardware Facts
+
+The LilyGO T-2CAN is not an unknown or improvised controller board. It is a documented ESP32-S3 dual-CAN development board with Arduino/PlatformIO support, USB-C programming/debugging, and MCP2515 CAN controller hardware. OpenHaldex-S3 uses that hardware because it is inexpensive, available, inspectable, and already suited to this type of CAN gateway/control project.
+
+Common claims about the T-2CAN hardware:
+
+| Claim | OpenHaldex-S3 position |
+|---|---|
+| The LilyGO T-2CAN cannot be used on automotive power. | OpenHaldex-S3 is installed on normal VAG 12 V vehicle power at the Haldex connector and has been validated in real vehicles over thousands of road miles. A severe alternator/load-dump, reverse-battery, dead-battery jump, or wiring fault can damage many vehicle modules and aftermarket controllers; that is not the same as normal 12 V automotive operation. Use the factory fused feed or an appropriate inline fuse and build the harness correctly. |
+| External MCP2515 CAN hardware is a weakness. | MCP2515 is a long-running Microchip stand-alone CAN controller, not an obscure clone part. Microchip lists MCP2515 as in production and recommended for automotive design, and the datasheet specifies CAN 2.0B support up to 1 Mb/s with standard and extended frames. OpenHaldex-S3 uses the ESP32-S3 TWAI controller for chassis CAN and MCP2515 for the Haldex-side CAN channel. |
+| The LilyGO board can cause no-starts, steering faults, or vehicle CAN failures. | A bad harness can cause CAN problems on any controller. The normal OpenHaldex-S3 control path reads chassis CAN, forwards/mutates the required traffic toward the Haldex controller, and does not emulate engine, ABS, steering, or immobilizer modules. Proper wiring, twisted CAN pairs, correct polarity, strain relief, and insulation are installation requirements, not LilyGO-specific defects. |
+| Screw terminals are unsafe by themselves. | Screw terminals do not create CAN faults by existing. Loose, unstrained, untwisted, undersized, or mis-pinned wiring creates CAN faults. Use ferrules or properly prepared wire ends, tighten terminals correctly, tug-test the harness, keep CAN pairs twisted, and enclose/strain-relieve the assembly. |
+| The board lacks an onboard mode LED or external mode button. | OpenHaldex-S3 uses the web UI, saved mode state, and configurable CAN mode trigger instead of requiring extra external controls. Lack of a dedicated LED or button is a feature difference, not evidence that the controller is unsuitable. |
+| The board lacks high-side drivers for brake or handbrake control. | Brake/handbrake output control is a Generation 1-specific feature, not a Gen 2, Gen 4, or Gen 5 requirement. OpenHaldex-S3 does not interrupt brake or handbrake wiring; those wires pass through the harness. Any controller that actually uses brake/handbrake IO still requires the installer to wire and configure those circuits correctly. Extra high-side outputs may be useful for other architectures, but they are not required for the OpenHaldex-S3 inline design. |
+| ESD or over-voltage can damage the board. | ESD, shorts, and abnormal voltage transients can damage many electronic modules, including OEM modules and custom aftermarket PCBs. The practical controls are correct installation, enclosure, strain relief, proper fusing, and avoiding exposed live wiring. This is not evidence that the T-2CAN cannot be used for this application. |
+| The LilyGO board is just another proprietary controller. | The T-2CAN is an off-the-shelf commercial development board. OpenHaldex-S3 firmware, web UI, PlatformIO project, and release metadata are public in this repository, so users can inspect, build, flash, repair, or replace the controller without a locked hardware ecosystem. |
+| No bundled enclosure or JTAG header makes it unsuitable. | A protected enclosure is recommended for any installed controller. The T-2CAN provides USB-C programming/debugging and BOOT/RESET controls; a dedicated JTAG breakout or bundled enclosure is a convenience feature, not a requirement for Haldex control. |
+| The install is still a custom harness and the cost is comparable. | OpenHaldex-S3 uses a simple inline harness built from the factory Haldex connector pair and an off-the-shelf board. The design avoids a proprietary PCB and proprietary controller harness, and typical parts cost remains low when using a T-2CAN and used OEM connectors. |
+
+References:
+
+- LilyGO T-2CAN project documentation: <https://github.com/Xinyuan-LilyGO/T-2Can>
+- Microchip MCP2515 product page: <https://www.microchip.com/en-us/product/mcp2515>
+- MCP2515 datasheet: <https://ww1.microchip.com/downloads/en/DeviceDoc/MCP2515-Stand-Alone-CAN-Controller-with-SPI-20001801J.pdf>
 
 ## Installation
 
@@ -119,6 +158,12 @@ After flashing and connecting to the web UI:
 5. Return to **Home** and select a mode.
 
 The generation selector intentionally starts blank on first setup. Saved local/device settings take priority after a generation has been selected.
+
+## Gen 5 Power Saving
+
+Gen 5 vehicles can keep the controller powered from battery at all times. OpenHaldex-S3 v1.1 adds parked sleep mode to reduce parked draw when Gen 5 is selected.
+
+When parked sleep is enabled, the controller enters deep sleep after ignition-off CAN state remains inactive for the configured delay. Chassis CAN activity wakes the ESP32-S3, the firmware checks the Gen 5 KL15 ignition signal, and it either continues full startup or returns to sleep. Hold the LilyGo BOOT button during reset to bypass parked sleep and keep the access point available for service.
 
 ## Web UI Access
 
@@ -240,8 +285,8 @@ The OTA updater checks:
 
 The latest metadata points to versioned release assets such as:
 
-- `https://openhaldex.dev/release/s3/v1.0/firmware.bin`
-- `https://openhaldex.dev/release/s3/v1.0/littlefs.bin`
+- `https://openhaldex.dev/release/s3/v1.1/firmware.bin`
+- `https://openhaldex.dev/release/s3/v1.1/littlefs.bin`
 
 OTA can update both firmware and LittleFS when release assets are available.
 

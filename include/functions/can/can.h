@@ -14,5 +14,8 @@ void parseCAN_chs(void* arg);
 void parseCAN_hdx(void* arg);
 
 void canInit();
+bool canInitChassisOnly(twai_mode_t mode = TWAI_MODE_NO_ACK);
+void canDeinit();
+void haldexCanSleep();
 void canRecoverIfBusFailure();
 void canPoll();

@@ -121,6 +121,10 @@ extern bool received_report_clutch2;
 extern bool received_temp_protection;
 extern bool received_coupling_open;
 extern bool received_speed_limit;
+extern bool lowPowerSleepEnabled;
+extern uint32_t lowPowerSleepDelayMs;
+extern uint32_t lowPowerWakeTimerSeconds;
+extern uint32_t lowPowerProbeDurationMs;
 
 bool loggingDebugCaptureActive();
 
