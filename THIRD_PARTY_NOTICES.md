@@ -1,55 +1,61 @@
 # Third-Party Notices
 
-This repository contains material from multiple upstream sources.
+OpenHaldex-S3 is licensed under the MIT License. This file records upstream
+project provenance and attribution for work that OpenHaldex-S3 builds on or
+interoperates with.
 
-## OpenHaldex
+## OpenHaldex / A Banging Donk
 
-- Upstream project: OpenHaldex by BangingDonk
-- License basis in this repository: MIT, where applicable
+- Upstream project: OpenHaldex / OpenHaldexT4 by A Banging Donk
+- Repository: <https://github.com/ABangingDonk/OpenHaldexT4>
+- License basis: permissive / MIT-compatible reuse as publicly stated by the
+  original author and carried forward by the OpenHaldex project lineage.
+
+OpenHaldex-S3 acknowledges A Banging Donk as the originator of the OpenHaldex
+platform. The wider OpenHaldex ecosystem, including later C6 and S3 work,
+traces back to the original OpenHaldexT4 project and its Gen 1 Haldex control
+work.
 
 ## OpenHaldex-C6 / Forbes Automotive
 
 - Upstream project: OpenHaldex-C6 by Forbes Automotive
-- License basis in this repository for identified C6-derived portions:
-  Forbes Automotive Source-Available License (FASL) v1.0
-- License text location:
-  `THIRD_PARTY_LICENSES/Forbes-Automotive-FASL-v1.0.txt`
+- Repository: <https://github.com/Forbes-Automotive/OpenHaldex-C6>
+- License basis: MIT License.
 
-This repository treats only the Gen 5 / C6-derived additions as subject to
-the FASL. Earlier OpenHaldex-S3 work authored independently before the
-March 4, 2026 introduction of the public C6 FASL is not reclassified by this
-notice.
+OpenHaldex-S3 acknowledges Forbes Automotive for reverse-engineering and
+implementing substantial Gen 2, Gen 4, and Gen 5 Haldex CAN frame behavior, and
+for introducing the learned Haldex output calibration table concept.
+OpenHaldex-S3 includes and interoperates with this Haldex generation support
+and related implementation knowledge where applicable.
 
-Current mixed-source files containing Gen 5 / C6-derived material include:
+## OpenHaldex-S3 / SpringfieldVW
 
-- `include/functions/can/can_id.h`
-  Gen 5 CAN ID additions only.
-- `include/functions/can/standalone_can.h`
-  Gen 5 counters, checksum declarations, and related standalone support only.
-- `include/functions/io/frames.h`
-  Gen 5 frame declarations only.
-- `src/functions/can/can_rx.cpp`
-  Gen 5-specific receive/decode portions only.
-- `src/functions/can/lock_data.cpp`
-  Gen 5 bridge/mutation logic.
-- `src/functions/can/standalone_can.cpp`
-  Gen 5 checksum helpers, lookup tables, and related standalone support.
-- `src/functions/canview/vw_mqb.dbc`
-  MQB DBC asset used for Gen 5 decode support.
-- `src/functions/canview/vw_mqb_chassis_dbc.cpp`
-  Generated MQB signal table derived from the Gen 5 MQB DBC asset.
-- `src/functions/io/frames.cpp`
-  Gen 5 standalone frame generation only.
-- `src/functions/tasks/tasks.cpp`
-  Gen 5 task dispatch only.
+- Project: OpenHaldex-S3 by SpringfieldVW / Chris "meatro"
+- Repository: <https://github.com/meatro/OpenHaldex-S3>
+- License basis: MIT License.
 
-For mixed-source files, only the identified Gen 5 / C6-derived portions are
-treated as FASL-covered. Unrelated OpenHaldex-S3-original portions remain
-under the repository's stated license structure.
+OpenHaldex-S3 includes firmware, web UI, data assets, PlatformIO project
+structure, release metadata, and documentation under the MIT License.
 
-## OpenHaldex-S3 UI
+OpenHaldex-S3's project-specific work includes the ESP32-S3 / LilyGO T-2CAN
+port, full HTML/CSS/JavaScript web UI, LittleFS web app structure, local
+name-service support, HTTP API control, live map editing and interpolation,
+PlatformIO project structure, Wi-Fi setup flow, CAN View UI, GVRET /
+SavvyCAN-oriented tooling, onboard diagnostics, OTA/update structure, parked
+sleep power saving, and related user-facing development workflow.
 
-- Path: `data/`
-- License text location: `data/LICENSE.md`
+## Lineage Summary
 
-The UI is separately licensed from the rest of the repository.
+The OpenHaldex project history is bidirectional after the initial C6 and S3
+work:
+
+`OpenHaldexT4 -> OpenHaldex-C6 -> OpenHaldex-S3 -> OpenHaldex-C6`
+
+OpenHaldex-C6 is downstream from A Banging Donk's OpenHaldexT4 work for the
+original platform lineage. OpenHaldex-S3 is downstream from early C6 work for
+Gen 2/4/5 Haldex support. OpenHaldex-C6 later imported OpenHaldex-S3-derived
+work back into C6 on 2026-02-08 in the `S3 port onto C6` commit. As a result,
+modern C6 feature families such as the web UI, maps, CAN View, API control,
+PlatformIO structure, Wi-Fi/web workflow, and release metadata include
+OpenHaldex-S3-derived lineage, while C6 remains credited for Gen 2/4/5 CAN
+reverse-engineering and learned calibration-table work.

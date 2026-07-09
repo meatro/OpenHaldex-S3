@@ -1,6 +1,6 @@
 // OpenHaldex-S3 UI
 // (c) 2026 SpringfieldVW.com
-// Licensed under the OpenHaldex-S3 UI Attribution License (see /data/LICENSE)
+// Licensed under the MIT License (see /data/LICENSE)
 
 const menuToggle = document.querySelector(".menu-toggle");
 const slideMenu = document.querySelector(".slide-menu");
