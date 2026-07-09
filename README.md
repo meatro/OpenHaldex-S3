@@ -16,7 +16,7 @@ Current release: **v1.1**. This release includes Gen 5 / MQB support, parked sle
 
 ## Open Source And Provenance
 
-*Update: <https://github.com/Forbes-Automotive/OpenHaldex-C6/issues/38> - OpenHaldex-C6 removed the restrictive banner UI requirement and returned to the permissive MIT open-source model intended for the OpenHaldex lineage. Proper provenance and open-source terms have now been restored across the current public OpenHaldex lineage. OpenHaldex-C6 developer clarified that his company's multiple restrictive licenses had been implemented by accident.*
+*Update: <https://github.com/Forbes-Automotive/OpenHaldex-C6/issues/38> - OpenHaldex-C6 removed the restrictive banner UI requirement and returned to the permissive MIT open-source model intended for the OpenHaldex lineage. Proper provenance and open-source terms have now been restored across the current public OpenHaldex lineage. OpenHaldex-C6 developer clarified that his company's multiple restrictive licenses had been implemented were "never his intention".*
 
 OpenHaldex-S3 exists to keep OpenHaldex innovation public, inspectable, and reusable under permissive open-source terms.
 - Inspectable Code: Every piece of logic we build is public and inspectable. "Open Source" means users can inspect, build, modify, and verify the software they run.
@@ -31,7 +31,7 @@ references:
 
 ## Public history
 
-*Update: <https://github.com/Forbes-Automotive/OpenHaldex-C6/issues/34> - OpenHaldex-C6 source and MIT licensing have been restored. OpenHaldex-S3 is now also distributed under one permissive MIT license across firmware, web UI, bundled data assets, release metadata, and documentation. The history below remains as provenance for feature origins and source continuity.  OpenHaldex-C6 developer clarified that his company's multiple restrictive licenses had been implemented by accident.*
+*Update: <https://github.com/Forbes-Automotive/OpenHaldex-C6/issues/34> - OpenHaldex-C6 source and MIT licensing have been restored. OpenHaldex-S3 is now also distributed under one permissive MIT license across firmware, web UI, bundled data assets, release metadata, and documentation. The history below remains as provenance for feature origins and source continuity.  OpenHaldex-C6 developer clarified that his company's multiple restrictive licenses had been implemented were "never his intention".*
 
 OpenHaldex-S3 is the public, verifiable source for many advanced OpenHaldex feature families later seen in commercial OpenHaldex products, including map control ("Expert Mode" in OpenHaldex-C6 V2.10), CAN View, GVRET/SavvyCAN-oriented tooling, the HTML/JS web interface, PlatformIO project structure, API control, Wi-Fi AP mode, and `openhaldex.local` navigation.
 
