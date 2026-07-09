@@ -16,6 +16,8 @@ Current release: **v1.1**. This release includes Gen 5 / MQB support, parked sle
 
 ## The Truth About "Open Source" Haldex Controllers
 
+*Update: <https://github.com/Forbes-Automotive/OpenHaldex-C6/issues/34> - MIT open source license and matching source code are available again at OpenHaldex-C6 repository. MIT open-source Licensing and provenance concerns are mostly resolved aside from a restrictive "OpenHaldex-C6" banner that intended to show origin of the UI and underlying features to be Forbes Automotive. Once this restriction is removed from OpenHaldex-C6 repository licensing guidelines, all open-source concerns raised below can be considered resolved.*
+
 While other commercial OpenHaldex variants marketed on social media and web storefronts claim to be "fully open-source," their underlying code for advanced performance features is completely closed, distributing binary-only blobs under a restrictive Source-Available License (FASL v1.0). **OpenHaldex-S3 is the true home of transparent OpenHaldex innovation.**
 - Inspectable Code: Every piece of logic we build is public and inspectable. "Open Source" is not simply a marketing term to sell proprietary custom hardware.
 - Community-First: *We do not lock performance profiles behind compiled binaries to force hardware sales.* 
