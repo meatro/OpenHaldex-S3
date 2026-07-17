@@ -18,6 +18,8 @@
 #include "functions/power/power.h"
 #include "functions/diag/uds.h"
 
+#include <optional>
+
 extern bool wifiInternetOk();
 extern void wifiApplySettings();
 
@@ -622,6 +624,7 @@ static void handleStatus(AsyncWebServerRequest* request) {
   doc["version"] = OPENHALDEX_VERSION;
   doc["mode"] = modeName(state.mode);
   doc["effectiveMode"] = modeName(openhaldexEffectiveMode());
+  doc["isStandalone"] = isStandalone;
   doc["disableController"] = disableController;
   doc["broadcastOpenHaldexOverCAN"] = broadcastOpenHaldexOverCAN;
   doc["effectiveBroadcastOpenHaldexOverCAN"] = openhaldexEffectiveBroadcastOpenHaldexOverCAN();
@@ -928,6 +931,7 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
   bool next_broadcast = broadcastOpenHaldexOverCAN;
   bool haldex_generation_set = false;
   uint8_t next_haldex_generation = haldexGeneration;
+  std::optional<bool> nextIsStandalone;
   bool low_power_sleep_set = false;
   bool next_low_power_sleep = lowPowerSleepEnabled;
   bool low_power_delay_set = false;
@@ -1044,6 +1048,10 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
       low_power_probe_set = true;
       next_low_power_probe = (uint32_t)v;
     }
+  }
+
+  if (doc.containsKey("isStandalone")) {
+    nextIsStandalone = doc["isStandalone"];
   }
 
   if (doc.containsKey("lowPowerSleepEnabled")) {
@@ -1293,6 +1301,10 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
     haldexGeneration = next_haldex_generation;
     dirty = true;
   }
+  if (nextIsStandalone.has_value()) {
+    isStandalone = nextIsStandalone.value();
+    dirty = true;
+  }
   if (low_power_sleep_set) {
     lowPowerSleepEnabled = next_low_power_sleep;
     dirty = true;
@@ -1419,6 +1431,7 @@ static void handleSettingsJson(AsyncWebServerRequest* request, const String& bod
   resp["broadcastOpenHaldexOverCAN"] = broadcastOpenHaldexOverCAN;
   resp["effectiveBroadcastOpenHaldexOverCAN"] = openhaldexEffectiveBroadcastOpenHaldexOverCAN();
   resp["haldexGeneration"] = haldexGeneration;
+  resp["isStandalone"] = isStandalone;
   JsonObject respPower = resp["lowPower"].to<JsonObject>();
   respPower["sleepEnabled"] = lowPowerSleepEnabled;
   respPower["sleepDelayMs"] = lowPowerSleepDelayMs;
