@@ -10,7 +10,9 @@
 #if OH_CAN_HALDEX_MCP2515
 #include <SPI.h>
 #include <mcp2515.h>
+#include <mutex>
 
+static std::mutex can_mcp_mutex;
 static MCP2515 can_mcp(MCP2515_CS, 10000000, &SPI);
 #endif
 
@@ -95,7 +97,11 @@ bool haldex_can_send(const twai_message_t& msg, TickType_t timeout_ticks, bool g
   for (uint8_t i = 0; i < frame.can_dlc && i < 8; i++) {
     frame.data[i] = msg.data[i];
   }
-  auto err = can_mcp.sendMessage(&frame);
+  MCP2515::ERROR err;
+  {
+    std::lock_guard<std::mutex> lock(can_mcp_mutex);
+    err = can_mcp.sendMessage(&frame);
+  }
   bool ok = (err == MCP2515::ERROR_OK);
   if (!ok && !can_rate_limited(last_can_hdx_tx_error_log_ms)) {
     LOG_WARN("can", "HDX TX failed (MCP2515) id=0x%lX err=%d", (unsigned long)msg.identifier, (int)err);
@@ -132,8 +138,11 @@ bool chassis_can_receive(twai_message_t& msg) {
 bool haldex_can_receive(twai_message_t& msg) {
 #if OH_CAN_HALDEX_MCP2515
   struct can_frame frame = {};
-  if (can_mcp.readMessage(&frame) != MCP2515::ERROR_OK) {
-    return false;
+  {
+    std::lock_guard<std::mutex> lock(can_mcp_mutex);
+    if (can_mcp.readMessage(&frame) != MCP2515::ERROR_OK) {
+      return false;
+    }
   }
   msg.identifier = frame.can_id & CAN_EFF_MASK;
   msg.extd = (frame.can_id & CAN_EFF_FLAG) ? 1 : 0;
@@ -160,6 +169,7 @@ bool canInitChassisOnly(twai_mode_t mode) {
 
 static bool can_init_haldex_bus() {
 #if OH_CAN_HALDEX_MCP2515
+  std::lock_guard<std::mutex> lock(can_mcp_mutex);
   // Haldex bus (logical bus 1) on MCP2515.
   pinMode(MCP2515_RST, OUTPUT);
   digitalWrite(MCP2515_RST, HIGH);
