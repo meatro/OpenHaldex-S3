@@ -47,5 +47,5 @@ extern const uint8_t ID_SEQ_392[16];
 extern const uint8_t ID_SEQ_641[16];
 extern const uint8_t ID_SEQ_65D[16];
 
-uint8_t crc8_autosar(uint8_t* data, uint8_t len);
-uint8_t calcChecksum(uint8_t* frame, const uint8_t* idSeq);
+uint8_t crc8_autosar(uint8_t const* data, uint8_t len);
+uint8_t calcChecksum(uint8_t const* frame, const uint8_t* idSeq);

@@ -67,7 +67,7 @@ const uint8_t ID_SEQ_641[16] = {0x47, 0x47, 0x47, 0x47, 0x47, 0x47, 0x47, 0x47,
 const uint8_t ID_SEQ_65D[16] = {0xAC, 0xB3, 0xAB, 0xEB, 0x7A, 0xE1, 0x3B, 0xF7,
                                 0x73, 0xBA, 0x7C, 0x9E, 0x06, 0x5F, 0x02, 0xD9};
 
-uint8_t crc8_autosar(uint8_t* data, uint8_t len) {
+uint8_t crc8_autosar(uint8_t const* data, uint8_t len) {
   uint8_t crc = 0xFF;
   for (uint8_t i = 0; i < len; i++) {
     crc ^= data[i];
@@ -82,7 +82,7 @@ uint8_t crc8_autosar(uint8_t* data, uint8_t len) {
   return crc ^ 0xFF;
 }
 
-uint8_t calcChecksum(uint8_t* frame, const uint8_t* idSeq) {
+uint8_t calcChecksum(uint8_t const* frame, const uint8_t* idSeq) {
   const uint8_t counter = frame[1] & 0x0F;
   uint8_t crcInput[8] = {};
   crcInput[0] = idSeq[counter];

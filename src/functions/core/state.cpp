@@ -1,5 +1,6 @@
 #include "functions/core/state.h"
 
+#include <algorithm>
 #include <math.h>
 
 #include "freertos/FreeRTOS.h"
@@ -370,7 +371,7 @@ bool dashboardSignalsGet(String* slots, size_t count, uint32_t timeout_ms) {
     return false;
   }
 
-  const size_t limit = (count < DASHBOARD_SIGNAL_SLOT_COUNT) ? count : DASHBOARD_SIGNAL_SLOT_COUNT;
+  const size_t limit = std::min<size_t>(count, DASHBOARD_SIGNAL_SLOT_COUNT);
   for (size_t i = 0; i < limit; i++) {
     slots[i] = dashboard_signal_slots[i];
   }
@@ -393,7 +394,7 @@ bool dashboardSignalsSet(const String* slots, size_t count, uint32_t timeout_ms)
     return false;
   }
 
-  const size_t limit = (count < DASHBOARD_SIGNAL_SLOT_COUNT) ? count : DASHBOARD_SIGNAL_SLOT_COUNT;
+  const size_t limit = std::min<size_t>(count, DASHBOARD_SIGNAL_SLOT_COUNT);
   for (size_t i = 0; i < limit; i++) {
     dashboard_signal_slots[i] = slots[i];
   }
