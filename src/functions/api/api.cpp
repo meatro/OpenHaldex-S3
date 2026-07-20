@@ -5,8 +5,13 @@
 #include <math.h>
 #include <string.h>
 #include <ctype.h>
+#include <algorithm>
+#include <vector>
+
+#include "freertos/task.h"
 
 #include "functions/api/api.h"
+#include "functions/can/can_state.h"
 #include "functions/core/state.h"
 #include "functions/config/pins.h"
 #include "functions/storage/storage.h"
@@ -18,6 +23,7 @@
 #include "functions/power/power.h"
 #include "functions/diag/uds.h"
 
+#include <format>
 #include <optional>
 
 extern bool wifiInternetOk();
@@ -2482,6 +2488,63 @@ static void handleUdsClearDtc(AsyncWebServerRequest* request) {
   sendJson(request, 200, doc);
 }
 
+// FreeRTOS task status endpoint - exposes uxTaskGetSystemState sorted by ulRunTimeCounter.
+static const char* taskStateString(eTaskState state) {
+  switch (state) {
+    case eRunning:   return "running";
+    case eReady:     return "ready";
+    case eBlocked:   return "blocked";
+    case eSuspended: return "suspended";
+    case eDeleted:   return "deleted";
+    case eInvalid:   return "invalid";
+    default:         return "unknown";
+  }
+}
+
+static void handleFreertosStatus(AsyncWebServerRequest* request) {
+  uint32_t taskCount = uxTaskGetNumberOfTasks();
+  if (taskCount == 0) {
+    sendError(request, 500, "no tasks");
+    return;
+  }
+
+  std::vector<TaskStatus_t> tasks(taskCount);
+  UBaseType_t filled = uxTaskGetSystemState(tasks.data(), tasks.size(), nullptr);
+  if (filled == 0) {
+    sendError(request, 500, "uxTaskGetSystemState failed");
+    return;
+  }
+
+  // Sort descending by ulRunTimeCounter (most CPU time first)
+  std::sort(tasks.begin(), tasks.begin() + filled,
+            [](const TaskStatus_t& a, const TaskStatus_t& b) {
+              return a.ulRunTimeCounter > b.ulRunTimeCounter;
+            });
+
+  configRUN_TIME_COUNTER_TYPE totalRuntime = portGET_RUN_TIME_COUNTER_VALUE();
+
+  JsonDocument doc;
+  doc["taskCount"] = filled;
+  doc["totalRuntimeTicks"] = totalRuntime;
+
+  JsonArray taskArray = doc["tasks"].to<JsonArray>();
+  for (UBaseType_t i = 0; i < filled; i++) {
+    JsonObject task = taskArray.add<JsonObject>();
+    task["name"] = (const char*)tasks[i].pcTaskName;
+    task["handle"] = std::format("{:p}", static_cast<void*>(tasks[i].xHandle));
+    task["state"] = taskStateString(tasks[i].eCurrentState);
+    task["currentPriority"] = tasks[i].uxCurrentPriority;
+    task["basePriority"] = tasks[i].uxBasePriority;
+    task["taskNumber"] = tasks[i].xTaskNumber;
+    task["runTimeTicks"] = tasks[i].ulRunTimeCounter;
+    task["runTimePct"] = totalRuntime > 0 ? (tasks[i].ulRunTimeCounter * 100.0 / totalRuntime) : 0.0f;
+    task["stackBase"] = std::format("{:p}", static_cast<void*>(tasks[i].pxStackBase));
+    task["highWaterMark"] = tasks[i].usStackHighWaterMark;
+  }
+
+  sendJson(request, 200, doc);
+}
+
 void setupApi(AsyncWebServer& server) {
   ensureDefaults();
 
@@ -2612,4 +2675,5 @@ void setupApi(AsyncWebServer& server) {
     [](AsyncWebServerRequest* request, uint8_t* data, size_t len, size_t index, size_t total) {
       onJsonBody(request, data, len, index, total, handleCanviewCapturePost);
     });
+  server.on("/api/freertos/status", HTTP_GET, [](AsyncWebServerRequest* request) { handleFreertosStatus(request); });
 }
