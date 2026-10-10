@@ -230,6 +230,10 @@ Summary:
 - Haldex CAN returns from CANHB/CANLB.
 - On Gen 5 vehicles, Term30 can remain powered after ignition-off. Enable Power Save after setup.
 
+#### Reference Drawing
+
+# ![Wiring Reference](docs/images/gen4_and_5_wiring.svg)
+
 ## First Setup
 
 After flashing and connecting to the web UI:

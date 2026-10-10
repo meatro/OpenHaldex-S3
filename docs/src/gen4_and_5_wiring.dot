@@ -1,0 +1,128 @@
+digraph OpenHaldexS3_Gen45_Wiring {
+    rankdir=LR;
+    label="OpenHaldex-S3 Gen 4/5 Wiring Diagram";
+    fontsize=16;
+
+    node [shape=box fillcolor=white, fontname="Helvetica", style=filled];
+    edge [fontname="Helvetica", fontsize=10];
+
+    // Subgraphs / clusters
+    subgraph cluster_vehicle {
+        label="Vehicle";
+        style=filled;
+        fillcolor=azure;
+
+        subgraph cluster_vehicle_conn {
+            label="Vehicle Connector\n1J0-973-813 (6-pin)";
+            style=filled;
+            fillcolor=lightgray;
+
+            v1 [label="Pin 1\nTerm15"];
+            v2 [label="Pin 2\nGround"];
+            v3 [label="Pin 3\nTerm30"];
+            v4 [label="Pin 4\nN/A (not used)"];
+            v5 [label="Pin 5\nChassis CAN L"];
+            v6 [label="Pin 6\nChassis CAN H"];
+        }
+    }
+
+    subgraph cluster_lilygo {
+        label="LilyGo T-2CAN\nESP32-S3";
+        style=filled;
+        fillcolor=azure;
+
+        subgraph cluster_power {
+            label="Power Header";
+            style=filled;
+            fillcolor=lightgray;
+
+            l1 [label="12-24V"];
+            l2 [label="GND"];
+        }
+
+        subgraph cluster_cana {
+            label="CANA (Haldex)";
+            style=filled;
+            fillcolor=lightgray;
+
+            l3 [label="CANLA\n(Haldex CAN L)"];
+            l4 [label="CANHA\n(Haldex CAN H)"];
+        }
+
+        subgraph cluster_canb {
+            label="CANB (Chassis)";
+            style=filled;
+            fillcolor=lightgray;
+
+            l5 [label="CANLB\n(Chassis CAN L)"];
+            l6 [label="CANHB\n(Chassis CAN H)"];
+        }
+    }
+
+    subgraph cluster_haldex {
+        label="Haldex Module";
+        style=filled;
+        fillcolor=azure;
+
+        subgraph cluster_haldex_conn {
+            label="Haldex Connector\n1J0-973-713 (6-pin)";
+            style=filled;
+            fillcolor=lightgray;
+
+            h1 [label="Pin 1\nTerm15"];
+            h2 [label="Pin 2\nGround"];
+            h3 [label="Pin 3\nTerm30"];
+            h4 [label="Pin 4\nN/A (not used)"];
+            h5 [label="Pin 5\nHaldex CAN L"];
+            h6 [label="Pin 6\nHaldex CAN H"];
+        }
+    }
+
+    // --- Signal connections (constraint=false so edges don't affect layout) ---
+
+    // Term15: Vehicle Pin 1 <-> Haldex Pin 1 (straight pass-through)
+    v1 -> h1 [ constraint=false dir=both];
+    // Term15 to LilyGo 12-24V: use when power save OFF (ignition-switched)
+    h1 -> l1 [ style=dashed constraint=false dir=both label="Power Save OFF\n(ignition-switched)" fontsize=8];
+
+    // Ground: Vehicle Pin 2 <-> Haldex Pin 2 + LilyGo GND (branch)
+    v2 -> h2 [ constraint=false dir=both];
+    h2 -> l2 [ constraint=false dir=both];
+
+    // Term30: Vehicle Pin 3 <-> Haldex Pin 3 (always powered)
+    v3 -> h3 [ constraint=false dir=both];
+    // Term30 to LilyGo 12-24V: use for power save mode (Gen 5)
+    h3 -> l1 [ constraint=false dir=both label="Power Save ON\n(always powered)" fontsize=8];
+
+    // Chassis CAN L: Vehicle Pin 5 <-> LilyGo CANLB (Terminal 5, CANB)
+    v5 -> l5 [ constraint=false dir=both];
+
+    // Chassis CAN H: Vehicle Pin 6 <-> LilyGo CANHB (Terminal 6, CANB)
+    v6 -> l6 [ constraint=false dir=both];
+
+    // Haldex CAN L: LilyGo CANLA (Terminal 3, CANA) <-> Haldex Pin 5
+    l3 -> h5 [ constraint=false dir=both];
+
+    // Haldex CAN H: LilyGo CANHA (Terminal 4, CANA) <-> Haldex Pin 6
+    l4 -> h6 [ constraint=false dir=both];
+
+    // Pin 4 N/A (not used on either side)
+    v4 -> h4 [ constraint=false dir=both];
+
+    // Power wiring note
+    note_power [label="NOTE: Connections to either of\npins 1 and 3 are mutually exclusive." shape=note
+                fontname="Helvetica" fontsize=10];
+
+    // Force numeric pin ordering with invisible edges
+    // Vehicle connector pins top-to-bottom
+    v1 -> v2 -> v3 -> v4 -> v5 -> v6 [style=invis, constraint=true];
+
+    // Haldex connector pins top-to-bottom
+    h1 -> h2 -> h3 -> h4 -> h5 -> h6 [style=invis, constraint=true];
+
+    // LilyGo terminals top-to-bottom (matching physical order)
+    l1 -> l2 -> l3 -> l4 -> l5 -> l6 [style=invis, constraint=true];
+
+    // Position note below 12-24V node
+    l1 -> note_power [style=dashed constraint=false dir=back];
+}
