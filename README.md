@@ -296,9 +296,9 @@ When parked sleep is enabled, the controller enters deep sleep after ignition-of
 
 The controller can run as its own access point and can also connect to a saved phone hotspot or local Wi-Fi network.
 
-- If STA credentials are saved and enabled, it attempts STA for about 15 seconds.
+- If STA credentials are saved and enabled, it connects to the saved network in the background, retrying periodically while it is unreachable.
   - On success, browse to `http://openhaldex.local`.
-- If STA fails or is not configured, it falls back to AP mode.
+- The OpenHaldex-S3 access point stays available at all times, regardless of STA state.
   - Connect to the OpenHaldex-S3 access point.
   - Browse to `http://192.168.4.1/` or `http://openhaldex.local`.
 

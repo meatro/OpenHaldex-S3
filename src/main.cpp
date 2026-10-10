@@ -179,12 +179,14 @@ static void applyStaPolicy(bool force_connect_attempt) {
   }
 
   WiFi.setAutoReconnect(true);
-  // Keep DHCP but force resolver selection for hotspot edge cases.
-  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, IPAddress(8, 8, 8, 8), IPAddress(1, 1, 1, 1));
 
+  // Early exit if already connected to correct network; avoids disrupting stable STA connection
   if (!force_connect_attempt && WiFi.status() == WL_CONNECTED && WiFi.SSID() == ssid) {
     return;
   }
+
+  // Keep DHCP but force resolver selection for hotspot edge cases.
+  WiFi.config(INADDR_NONE, INADDR_NONE, INADDR_NONE, IPAddress(8, 8, 8, 8), IPAddress(1, 1, 1, 1));
 
   uint32_t now = millis();
   bool ssid_changed = (ssid != g_sta_last_attempt_ssid);
