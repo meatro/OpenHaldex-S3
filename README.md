@@ -124,15 +124,15 @@ Confirm every pin against the factory wiring diagram for your exact chassis and 
 
 1. 12-24V -> fused Haldex controller power branch.
 2. GND -> Haldex controller ground branch.
-3. CANLA -> vehicle / chassis CAN low.
-4. CANHA -> vehicle / chassis CAN high.
-5. CANLB -> Haldex module CAN low.
-6. CANHB -> Haldex module CAN high.
+3. CANLA -> Haldex module CAN low.
+4. CANHA -> Haldex module CAN high.
+5. CANLB -> Vehicle / Chassis CAN low.
+6. CANHB -> Vehicle / Chassis CAN high.
 
 Summary:
 
-- Vehicle / chassis CAN goes to CANHA/CANLA.
-- Haldex module CAN goes to CANHB/CANLB.
+- Haldex module CAN goes to CANHA/CANLA (CANA).
+- Vehicle / chassis CAN goes to CANHB/CANLB (CANB).
 - Power and ground stay connected to the Haldex module and are branched to the LilyGo.
 - Non-CAN vehicle signals pass through unless you are intentionally adding external Gen 1 hardware.
 - Keep CAN pairs twisted as long as practical.
@@ -142,7 +142,7 @@ Summary:
 
 Gen 1 is the only Haldex generation in this README that uses the 8-pin connector pair. Do not use this pinout for Gen 2, Gen 4, or Gen 5.
 
-### Vehicle Connector (`1J0-973-714`)
+#### Vehicle Connector (`1J0-973-714`)
 
 1. Term15 -> Haldex pin 1.
 2. Ground -> Haldex pin 2 and LilyGo GND.
@@ -150,10 +150,10 @@ Gen 1 is the only Haldex generation in this README that uses the 8-pin connector
 4. Handbrake -> Haldex pin 4.
 5. K-Line -> Haldex pin 5.
 6. N/A -> not used.
-7. Chassis CAN L -> LilyGo CANLA.
-8. Chassis CAN H -> LilyGo CANHA.
+7. Chassis CAN L -> LilyGo CANLB.
+8. Chassis CAN H -> LilyGo CANHB.
 
-### Haldex Connector (`1J0-973-814`)
+#### Haldex Connector (`1J0-973-814`)
 
 1. Term15 -> Vehicle pin 1.
 2. Ground -> Vehicle pin 2.
@@ -161,10 +161,10 @@ Gen 1 is the only Haldex generation in this README that uses the 8-pin connector
 4. Handbrake -> Vehicle pin 4.
 5. K-Line -> Vehicle pin 5.
 6. N/A -> not used.
-7. Haldex CAN L -> LilyGo CANLB.
-8. Haldex CAN H -> LilyGo CANHB.
+7. Haldex CAN L -> LilyGo CANLA.
+8. Haldex CAN H -> LilyGo CANHA.
 
-Summary:
+#### Summary
 
 - Term15, brake light, handbrake, and K-Line pass through.
 - Ground passes through and branches to LilyGo GND.
@@ -175,59 +175,59 @@ Summary:
 
 This example uses the common Mk5 R32 / PQ style Haldex connector wiring. Confirm wiring for your own vehicle before building a harness.
 
-### Haldex Connector (`1J0-973-713`)
+#### Haldex Connector (`1J0-973-713`)
 
 1. 12V power -> Vehicle pin 1 and LilyGo 12-24V (BK/VI)
 2. Ground -> Vehicle pin 2 and LilyGo GND (BR)
 3. Brake -> Vehicle pin 3 (BK/RD)
-4. CAN L -> LilyGo CANLB (OR/BR)
-5. CAN H -> LilyGo CANHB (OR/BK)
+4. CAN L -> LilyGo CANLA (OR/BR)
+5. CAN H -> LilyGo CANHA (OR/BK)
 
-### Vehicle Connector (`1J0-973-813`)
+#### Vehicle Connector (`1J0-973-813`)
 
 1. 12V power -> Haldex pin 1 and LilyGo 12-24V (BK/VI)
 2. Ground -> Haldex pin 2 and LilyGo GND (BR)
 3. Brake -> Haldex pin 3 (BK/RD)
-4. CAN L -> LilyGo CANLA (OR/BR)
-5. CAN H -> LilyGo CANHA (OR/BK)
+4. CAN L -> LilyGo CANLB (OR/BR)
+5. CAN H -> LilyGo CANHB (OR/BK)
 
-Summary:
+#### Summary
 
 - The 12V feed passes through and branches to LilyGo 12-24V.
 - Ground passes through and branches to LilyGo GND.
 - Brake and handbrake style signals pass through. OpenHaldex-S3 does not interrupt them.
-- Chassis CAN enters CANHA/CANLA.
-- Haldex CAN returns from CANHB/CANLB.
+- Chassis CAN enters CANHB/CANLB (CANB).
+- Haldex CAN connects to CANHA/CANLA (CANA).
 
 ### Gen 4 / Gen 5 6-Pin Example
 
 This example uses the common Term15 / ground / Term30 / CAN pair layout used on later Haldex controllers. Confirm the pinout before using this on any specific Gen 4 or Gen 5 vehicle.
 
-### Vehicle Connector (`1J0-973-813`)
+#### Vehicle Connector (`1J0-973-813`)
 
 1. Term15 -> Haldex pin 1.
 2. Ground -> Haldex pin 2 and LilyGo GND.
 3. Term30 -> Haldex pin 3 and LilyGo 12-24V.
 4. N/A -> not used.
-5. Chassis CAN L -> LilyGo CANLA.
-6. Chassis CAN H -> LilyGo CANHA.
+5. Chassis CAN L -> LilyGo CANLB.
+6. Chassis CAN H -> LilyGo CANHB.
 
-### Haldex Connector (`1J0-973-713`)
+#### Haldex Connector (`1J0-973-713`)
 
 1. Term15 -> Vehicle pin 1.
 2. Ground / MALT -> Vehicle pin 2.
 3. Term30 -> Vehicle pin 3.
 4. N/A -> not used.
-5. Haldex CAN L -> LilyGo CANLB.
-6. Haldex CAN H -> LilyGo CANHB.
+5. Haldex CAN L -> LilyGo CANLA.
+6. Haldex CAN H -> LilyGo CANHA.
 
-Summary:
+#### Summary
 
 - Term15 passes through to the Haldex module.
 - Term30 passes through and branches to LilyGo 12-24V.
 - Ground / MALT passes through and branches to LilyGo GND.
-- Chassis CAN enters CANHA/CANLA.
-- Haldex CAN returns from CANHB/CANLB.
+- Chassis CAN enters CANHB/CANLB (CANB).
+- Haldex CAN connects to CANHA/CANLA (CANA).
 - On Gen 5 vehicles, Term30 can remain powered after ignition-off. Enable Power Save after setup.
 
 ## First Setup
