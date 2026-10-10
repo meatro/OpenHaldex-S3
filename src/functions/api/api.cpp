@@ -27,6 +27,10 @@ extern void wifiApplySettings();
 #define OPENHALDEX_VERSION "dev"
 #endif
 
+#ifndef OPENHALDEX_GIT_COMMIT
+#define OPENHALDEX_GIT_COMMIT "unknown"
+#endif
+
 // Keep runtime mode enum valid when upgrading from older stored state.
 static void ensureDefaults() {
   if (state.mode >= openhaldex_mode_t_MAX) {
@@ -622,6 +626,7 @@ static void handleStatus(AsyncWebServerRequest* request) {
   JsonDocument doc;
 
   doc["version"] = OPENHALDEX_VERSION;
+  doc["gitCommit"] = OPENHALDEX_GIT_COMMIT;
   doc["mode"] = modeName(state.mode);
   doc["effectiveMode"] = modeName(openhaldexEffectiveMode());
   doc["isStandalone"] = isStandalone;
